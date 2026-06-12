@@ -1,0 +1,27 @@
+{
+  "name": "future-failure",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "prepare:assets": "tsx scripts/prepare-assets.ts",
+    "test:assets": "tsx scripts/test-assets.ts",
+    "test:level": "tsx scripts/test-level.ts",
+    "test:combat": "tsx scripts/test-combat.ts",
+    "test:movement": "tsx scripts/test-movement.ts",
+    "test:tutorial": "tsx scripts/test-tutorial.ts"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "sharp": "^0.33.5",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3"
+  }
+}
