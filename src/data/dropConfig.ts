@@ -9,7 +9,7 @@ import { type PickupType } from '../entities/Pickup';
  * invariants — e.g. that energy is always the most likely reward.
  */
 
-export type EnemyDropKind = 'trooper' | 'drone' | 'mech';
+export type EnemyDropKind = 'trooper' | 'drone' | 'mech' | 'scout' | 'sentinel';
 
 export type DropWeight = {
   type: PickupType;
@@ -57,6 +57,24 @@ export const dropConfig = {
         { type: 'energyCell', weight: 44 },
         { type: 'healthLarge', weight: 20 },
         { type: 'healthSmall', weight: 16 },
+      ],
+    },
+    scout: {
+      // Lightweight and fast — lower drop chance, mostly energy.
+      dropChance: 0.42,
+      table: [
+        { type: 'energyCell', weight: 58 },
+        { type: 'healthSmall', weight: 28 },
+        { type: 'healthLarge', weight: 8 },
+      ],
+    },
+    sentinel: {
+      // Stationary turret — rewards patient players who destroy it.
+      dropChance: 0.65,
+      table: [
+        { type: 'energyCell', weight: 48 },
+        { type: 'healthSmall', weight: 30 },
+        { type: 'healthLarge', weight: 16 },
       ],
     },
   } satisfies Record<EnemyDropKind, EnemyDropProfile>,

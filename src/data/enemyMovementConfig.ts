@@ -27,6 +27,10 @@ export type DroneMovementConfig = {
   attackStopDistance: number;
 };
 
+export type ScoutMovementConfig = GroundEnemyMovementConfig & {
+  chargeSpeed: number;
+};
+
 export const enemyMovementConfig = {
   trooper: {
     patrolSpeed: 72,
@@ -65,8 +69,35 @@ export const enemyMovementConfig = {
     closeRetreatDistance: 118,
     attackStopDistance: 355,
   },
+  scout: {
+    patrolSpeed: 118,
+    chaseSpeed: 162,
+    chargeSpeed: 385,
+    acceleration: 1450,
+    deceleration: 1800,
+    leashDistance: 410,
+    edgeProbeX: 30,
+    edgeProbeY: 18,
+    recoverMs: 300,
+    closeRetreatDistance: 85,
+    attackStopDistance: 190,
+  },
+  sentinel: {
+    patrolSpeed: 0,
+    chaseSpeed: 0,
+    acceleration: 1350,
+    deceleration: 1400,
+    leashDistance: 0,
+    edgeProbeX: 0,
+    edgeProbeY: 0,
+    recoverMs: 200,
+    closeRetreatDistance: 0,
+    attackStopDistance: 490,
+  },
 } satisfies {
   trooper: GroundEnemyMovementConfig;
   drone: DroneMovementConfig;
   mech: GroundEnemyMovementConfig;
+  scout: ScoutMovementConfig;
+  sentinel: GroundEnemyMovementConfig;
 };

@@ -52,6 +52,8 @@ export const elementSprites = {
     trooper: { category: 'enemy', frame: frameFor.trooperIdle, fit: 'contain', align: 'bottom', role: 'enemy' },
     drone: { category: 'enemy', frame: frameFor.droneIdle, fit: 'contain', align: 'center', role: 'enemy' },
     mech: { category: 'enemy', frame: frameFor.mechIdle, fit: 'contain', align: 'bottom', role: 'enemy' },
+    scout: { category: 'enemy', frame: frameFor.scoutIdle, fit: 'contain', align: 'bottom', role: 'enemy' },
+    sentinel: { category: 'enemy', frame: frameFor.sentinelIdle, fit: 'contain', align: 'center', role: 'enemy' },
   },
 } as const;
 

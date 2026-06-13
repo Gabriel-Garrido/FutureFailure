@@ -86,6 +86,8 @@ export const frameFor = {
   trooperIdle: 0,
   droneIdle: 6,
   mechIdle: 12,
+  scoutIdle: 0,
+  sentinelIdle: 0,
 };
 
 export const frameBoundsFor = {

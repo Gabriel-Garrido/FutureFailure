@@ -8,6 +8,8 @@ import { DroneEnemy } from '../entities/DroneEnemy';
 import { EnemyBase } from '../entities/EnemyBase';
 import { MechEnemy } from '../entities/MechEnemy';
 import { Pickup } from '../entities/Pickup';
+import { ScoutEnemy } from '../entities/ScoutEnemy';
+import { SentinelEnemy } from '../entities/SentinelEnemy';
 import { TrooperEnemy } from '../entities/TrooperEnemy';
 import { COLORS, DEPTHS } from '../game/constants';
 
@@ -83,6 +85,8 @@ export class LevelBuilder {
       let instance: EnemyBase;
       if (enemy.type === 'drone') instance = new DroneEnemy(this.scene, enemy.x, enemy.y, assetKey('drone', 'fallback-drone'), elementSprites.enemies.drone.frame, patrolMin, patrolMax);
       else if (enemy.type === 'mech') instance = new MechEnemy(this.scene, enemy.x, enemy.y, assetKey('mech', 'fallback-mech'), elementSprites.enemies.mech.frame, patrolMin, patrolMax);
+      else if (enemy.type === 'scout') instance = new ScoutEnemy(this.scene, enemy.x, enemy.y, assetKey('scout', 'fallback-scout'), elementSprites.enemies.scout.frame, patrolMin, patrolMax);
+      else if (enemy.type === 'sentinel') instance = new SentinelEnemy(this.scene, enemy.x, enemy.y, assetKey('sentinel', 'fallback-sentinel'), elementSprites.enemies.sentinel.frame, patrolMin, patrolMax);
       else instance = new TrooperEnemy(this.scene, enemy.x, enemy.y, assetKey('trooper', 'fallback-trooper'), elementSprites.enemies.trooper.frame, patrolMin, patrolMax);
       enemies.add(instance);
       this.createDebugPoint(enemy.x, enemy.y, COLORS.red, enemy.id);
