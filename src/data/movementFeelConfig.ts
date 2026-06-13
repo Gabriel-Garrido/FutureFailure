@@ -52,7 +52,7 @@ export const movementFeelConfig: MovementFeelConfig = {
   airDeceleration: 2850,
   apexAirControlMultiplier: 1.36,
   turnaroundAccelerationMultiplier: 1.62,
-  jumpVelocity: -790,
+  jumpVelocity: -869,
   gravityUp: 1980,
   gravityDown: 3560,
   apexGravity: 720,

@@ -28,7 +28,7 @@ assert(playerSpriteConfig.scale === 0.346, 'Hero visual and physics scale must s
 assert(playerSpriteConfig.body.width === 104 && playerSpriteConfig.body.height === 242, 'Hero body must grow with the +8% visual scale.');
 assert(playerSpriteConfig.body.offsetX === 88 && playerSpriteConfig.body.offsetY === 26, 'Hero body offset must keep feet aligned after scaling.');
 assert(playerSpriteConfig.projectileHurtZone.width === 93 && playerSpriteConfig.projectileHurtZone.height === 186, 'Hero projectile hurt zone must grow with the +8% scale.');
-assert(movement.jumpVelocity <= -790, 'Hero jump should be retuned upward for the larger sprite.');
+assert(movement.jumpVelocity <= -869, 'Hero jump should stay 10% higher than the previous -790 tuning.');
 assert((movement.dashSpeed * movement.dashDurationMs) / 1000 >= 121, 'Hero dash range should grow with the larger sprite.');
 assert(movement.dashEndSpeed >= 405, 'Hero dash exit speed should preserve momentum after the longer dash.');
 assert(movement.wallJumpVelocityX > movement.maxRunSpeed, 'Wall jump must push the hero away from the wall.');
