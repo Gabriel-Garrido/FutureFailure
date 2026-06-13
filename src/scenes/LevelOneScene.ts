@@ -1,12 +1,14 @@
 import Phaser from 'phaser';
+import { assetKey } from '../data/assetMap';
 import { combatConfig, type DamagePayload } from '../data/combatConfig';
+import { dropConfig, rollEnemyDrop, type EnemyDropKind } from '../data/dropConfig';
+import { elementSprites } from '../data/elementSpriteConfig';
 import { gameText } from '../data/gameText';
 import { levelOne } from '../data/levelOne';
 import { tutorialPresentationConfig, type TutorialActionId, type TutorialPromptPayload } from '../data/tutorialConfig';
-import { type RectData } from '../data/levelTypes';
+import { type BreakableData, type RectData } from '../data/levelTypes';
 import { EnemyBase } from '../entities/EnemyBase';
-import { Hazard } from '../entities/Hazard';
-import { Pickup } from '../entities/Pickup';
+import { Pickup, type PickupType } from '../entities/Pickup';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
 import { COLORS, EVENTS } from '../game/constants';
@@ -32,8 +34,7 @@ export class LevelOneScene extends Phaser.Scene {
   private level?: BuiltLevel;
   private enemyProjectiles?: Phaser.Physics.Arcade.Group;
   private playerProjectiles?: Phaser.Physics.Arcade.Group;
-  private checkpoint: SaveState = { checkpointId: 'awakening', x: levelOne.playerSpawn.x, y: levelOne.playerSpawn.y, health: 5, hasKeycard: false };
-  private nearbyDoor?: import('../entities/Door').Door;
+  private saveState: SaveState = { x: levelOne.playerSpawn.x, y: levelOne.playerSpawn.y, health: 5, hasKeycard: false };
   private nearbyTerminal?: Phaser.GameObjects.Zone;
   private finalOpen = false;
   private shootCooldownMs = 0;
@@ -58,14 +59,14 @@ export class LevelOneScene extends Phaser.Scene {
     this.pauseMenu = new PauseMenu(this);
 
     const saved = new SaveSystem().load();
-    this.checkpoint = this.normalizeCheckpoint(saved ?? this.checkpoint);
-    this.restoreProgressFromCheckpoint();
+    this.saveState = this.normalizeSave(saved ?? this.saveState);
+    this.restoreProgressFromSave();
 
     const builder = new LevelBuilder(this);
     this.level = builder.build(levelOne);
-    this.player = new Player(this, this.checkpoint.x, this.checkpoint.y, this.particles, this.audioSystem);
-    this.player.hasKeycard = this.checkpoint.hasKeycard;
-    this.player.health = this.checkpoint.health;
+    this.player = new Player(this, this.saveState.x, this.saveState.y, this.particles, this.audioSystem);
+    this.player.hasKeycard = this.saveState.hasKeycard;
+    this.player.health = this.saveState.health;
     this.cameraSystem = new CameraSystem(this, this.player, levelOne);
     new TouchControls(this, this.inputSystem);
 
@@ -96,7 +97,6 @@ export class LevelOneScene extends Phaser.Scene {
     if (input.shootPressed) this.firePlayerProjectile();
     if (input.interactPressed) this.interact();
 
-    for (const hazard of this.level.hazards) hazard.updateHazard(delta);
     for (const pickup of this.level.pickups.getChildren() as Pickup[]) pickup.updatePickup(delta);
     for (const enemy of this.level.enemies.getChildren() as EnemyBase[]) enemy.updateEnemy(delta, this.player, this.enemyProjectiles!);
     this.updateContextPrompts();
@@ -109,29 +109,29 @@ export class LevelOneScene extends Phaser.Scene {
   private connectPhysics(): void {
     if (!this.level || !this.player || !this.enemyProjectiles || !this.playerProjectiles) return;
     this.physics.add.collider(this.player, this.level.platforms);
+    this.physics.add.collider(this.player, this.level.oneWayPlatforms, undefined, this.canLandOnOneWayPlatform, this);
     this.physics.add.collider(this.player, this.level.breakables);
     this.physics.add.collider(this.level.enemies, this.level.platforms);
     this.physics.add.collider(this.level.enemies, this.level.breakables);
     this.physics.add.collider(this.enemyProjectiles, this.level.platforms, (projectile) => (projectile as Projectile).kill());
     this.physics.add.collider(this.enemyProjectiles, this.level.breakables, (projectile) => (projectile as Projectile).kill());
     this.physics.add.collider(this.playerProjectiles, this.level.platforms, (projectile) => (projectile as Projectile).kill());
-    for (const door of this.level.doors) {
-      this.physics.add.collider(this.player, door);
-      this.physics.add.collider(this.level.enemies, door);
-    }
-    for (const hazard of this.level.hazards) {
-      this.physics.add.overlap(this.player, hazard.zone, () => this.player?.takeDamage(this.hazardDamagePayload(hazard)));
-    }
     this.physics.add.overlap(this.player, this.level.pickups, (_playerObject, pickupObject) => {
       const pickup = pickupObject as Pickup;
       pickup.collect(this.player!);
       this.particles?.pickup(pickup.x, pickup.y);
       this.audioSystem?.blip('pickup');
     });
-    for (const checkpoint of this.level.checkpoints) {
-      this.physics.add.overlap(this.player, checkpoint.zone, () => this.activateCheckpoint(checkpoint));
-    }
     this.physics.add.overlap(this.player, this.level.finalPortal, () => this.tryFinishLevel());
+  }
+
+  private canLandOnOneWayPlatform(playerObject: unknown, platformObject: unknown): boolean {
+    const playerBody = (playerObject as Phaser.Types.Physics.Arcade.GameObjectWithBody).body as Phaser.Physics.Arcade.Body;
+    const platformTop = Number((platformObject as Phaser.GameObjects.GameObject).getData('platformTop'));
+    if (!Number.isFinite(platformTop)) return false;
+    if (playerBody.velocity.y < 0) return false;
+    const previousBottom = playerBody.y + playerBody.height - playerBody.deltaY();
+    return previousBottom <= platformTop + 8;
   }
 
   private connectEvents(): void {
@@ -140,10 +140,11 @@ export class LevelOneScene extends Phaser.Scene {
       this.cameraSystem?.shake('light');
       this.audioSystem?.blip('hit');
     });
-    this.events.on(EVENTS.enemyDefeated, (x: number, y: number) => {
+    this.events.on(EVENTS.enemyDefeated, (x: number, y: number, _direction: 1 | -1, _payload: DamagePayload | undefined, kind: EnemyDropKind) => {
       this.particles?.enemyDefeat(x, y);
       this.cameraSystem?.shake('hit');
       this.audioSystem?.blip('finisher');
+      this.spawnEnemyDrop(kind, x, y);
       if (x > 2440 && x < 2940 && !this.completedObjectives.has('combat')) {
         this.completedObjectives.add('combat');
         this.emitObjective(gameText.objectives.combatComplete, 2600);
@@ -154,10 +155,11 @@ export class LevelOneScene extends Phaser.Scene {
         this.emitObjective(gameText.objectives.portalReady, 3200);
       }
     });
-    this.events.on('breakable-broken', (x: number, y: number) => {
+    this.events.on('breakable-broken', (x: number, y: number, _payload: DamagePayload | undefined, breakable?: BreakableData) => {
       this.particles?.explosion(x, y);
       this.cameraSystem?.shake('light');
       this.audioSystem?.blip('hit');
+      this.spawnBreakableDrop(breakable);
     });
     this.events.on('enemy-shoot', () => this.audioSystem?.blip('shoot'));
     this.events.on('player-dash', () => this.cameraSystem?.shake('light'));
@@ -187,40 +189,27 @@ export class LevelOneScene extends Phaser.Scene {
   private emitInitialUi(): void {
     if (!this.player) return;
     this.game.events.emit(EVENTS.healthChanged, this.player.health, this.player.maxHealth);
-    this.game.events.emit(EVENTS.energyChanged, this.player.energy, 5);
+    this.game.events.emit(EVENTS.energyChanged, this.player.energy, this.player.maxEnergy);
     this.game.events.emit(EVENTS.keycardChanged, this.player.hasKeycard);
     this.game.events.emit(EVENTS.mapConfigured, levelOne.width, levelOne.mapMarkers);
     this.emitObjective(this.initialObjective());
     this.game.events.emit(EVENTS.playerPositionChanged, this.player.x, this.player.y);
   }
 
-  private normalizeCheckpoint(state: SaveState): SaveState {
-    const hasValidPosition = Number.isFinite(state.x)
-      && Number.isFinite(state.y)
-      && state.x >= 80
-      && state.x <= levelOne.width - 80
-      && state.y >= 80
-      && state.y <= levelOne.height - 80;
-
-    if (!hasValidPosition) {
-      return { checkpointId: 'inicio', x: levelOne.playerSpawn.x, y: levelOne.playerSpawn.y, health: 5, hasKeycard: false };
-    }
-
+  private normalizeSave(state: SaveState): SaveState {
+    const normalizedHealth = Phaser.Math.Clamp(Math.round(state.health || 5), 1, 5);
     return {
-      checkpointId: state.checkpointId || 'inicio',
-      x: state.x,
-      y: state.y,
-      health: Phaser.Math.Clamp(Math.round(state.health || 5), 1, 5),
+      x: levelOne.playerSpawn.x,
+      y: levelOne.playerSpawn.y,
+      health: normalizedHealth,
       hasKeycard: Boolean(state.hasKeycard),
     };
   }
 
   private updateContextPrompts(): void {
     if (!this.level || !this.player) return;
-    this.nearbyDoor = this.level.doors.find((door) => !door.isOpen() && Phaser.Math.Distance.Between(this.player!.x, this.player!.y, door.x, door.y) < 110);
     this.nearbyTerminal = this.level.terminals.find((terminal) => Phaser.Math.Distance.Between(this.player!.x, this.player!.y, terminal.x, terminal.y) < 95);
-    if (this.nearbyDoor) this.game.events.emit(EVENTS.contextChanged, this.nearbyDoor.canOpen(this.player, this.isDoorRequirementMet(this.nearbyDoor)) ? gameText.prompts.openDoor : this.lockedDoorMessage(this.nearbyDoor));
-    else if (this.nearbyTerminal) this.game.events.emit(EVENTS.contextChanged, gameText.prompts.readTerminal);
+    if (this.nearbyTerminal) this.game.events.emit(EVENTS.contextChanged, gameText.prompts.readTerminal);
     else this.game.events.emit(EVENTS.contextChanged, '');
   }
 
@@ -247,15 +236,6 @@ export class LevelOneScene extends Phaser.Scene {
 
   private interact(): void {
     if (!this.player) return;
-    if (this.nearbyDoor?.interact(this.player, this.isDoorRequirementMet(this.nearbyDoor))) {
-      this.audioSystem?.blip('door');
-      this.cameraSystem?.shake('light');
-      const requirement = this.nearbyDoor.requirement();
-      if (requirement === 'movement') this.emitObjective(gameText.guidance.wallJump, 2200);
-      else if (requirement === 'combat') this.emitObjective(gameText.guidance.reactor, 2200);
-      else if (requirement === 'keycard') this.emitObjective(gameText.objectives.arenaDoorOpened, 2600);
-      return;
-    }
     if (this.nearbyTerminal) {
       this.emitObjective(this.nearbyTerminal.getData('message') as string, 3200);
     }
@@ -292,13 +272,28 @@ export class LevelOneScene extends Phaser.Scene {
     });
   }
 
-  private activateCheckpoint(checkpoint: import('../entities/Checkpoint').Checkpoint): void {
-    if (!this.player) return;
-    if (checkpoint.activeCheckpoint) return;
-    checkpoint.activate();
-    this.checkpoint = { checkpointId: checkpoint.id, x: checkpoint.x, y: checkpoint.y, health: this.player.maxHealth, hasKeycard: this.player.hasKeycard };
-    new SaveSystem().save(this.checkpoint);
-    this.emitObjective(gameText.objectives.checkpoint, 1600);
+  private spawnBreakableDrop(breakable?: BreakableData): void {
+    if (!breakable?.drop) return;
+    const x = breakable.x + breakable.width / 2 + (breakable.drop.offsetX ?? 0);
+    const startY = breakable.y + breakable.height / 2 + (breakable.drop.offsetY ?? 0);
+    this.spawnDrop(breakable.drop.type, x, startY, breakable.drop.riseY ?? 46, breakable.drop.id);
+  }
+
+  private spawnEnemyDrop(kind: EnemyDropKind, x: number, y: number): void {
+    const type = rollEnemyDrop(kind);
+    if (!type) return;
+    this.spawnDrop(type, x, y, dropConfig.enemyRiseY);
+  }
+
+  private spawnDrop(type: PickupType, x: number, startY: number, riseY: number, id?: string): void {
+    if (!this.level) return;
+    const texture = assetKey('pickups', 'fallback-pickup');
+    const frame = elementSprites.pickups[type].frame;
+    const targetY = startY - riseY;
+    const pickup = new Pickup(this, x, startY, type, texture, frame, { collectible: false });
+    if (id) pickup.setData('id', id);
+    this.level.pickups.add(pickup);
+    pickup.revealFromBreakable(targetY, dropConfig.revealDurationMs, dropConfig.revealEase);
   }
 
   private checkFallDeath(): void {
@@ -308,7 +303,8 @@ export class LevelOneScene extends Phaser.Scene {
 
   private remainingArenaEnemies(): number {
     if (!this.level) return 1;
-    return (this.level.enemies.getChildren() as EnemyBase[]).filter((enemy) => !enemy.isDead() && enemy.x > 4590).length;
+    const arenaStart = levelOne.zones.find((zone) => zone.id === 'zone-arena')?.x ?? 4590;
+    return (this.level.enemies.getChildren() as EnemyBase[]).filter((enemy) => !enemy.isDead() && enemy.x >= arenaStart).length;
   }
 
   private tryFinishLevel(): void {
@@ -319,21 +315,6 @@ export class LevelOneScene extends Phaser.Scene {
     this.game.events.emit(EVENTS.objectiveChanged, gameText.objectives.levelComplete);
     this.scene.pause();
     this.add.text(this.cameras.main.scrollX + 480, this.cameras.main.scrollY + 240, 'GRIETA ASEGURADA', { fontFamily: 'Arial Black, Arial', fontSize: '40px', color: '#d7fbff' }).setOrigin(0.5).setDepth(2000);
-  }
-
-  private isDoorRequirementMet(door: import('../entities/Door').Door): boolean {
-    const requirement = door.requirement();
-    if (!requirement || requirement === 'keycard') return false;
-    return this.completedObjectives.has(requirement);
-  }
-
-  private lockedDoorMessage(door: import('../entities/Door').Door): string {
-    const requirement = door.requirement();
-    if (requirement === 'keycard') return gameText.prompts.keycardRequired;
-    if (requirement === 'movement') return gameText.prompts.movementRequired;
-    if (requirement === 'combat') return gameText.prompts.combatRequired;
-    if (requirement === 'arena') return gameText.prompts.arenaRequired;
-    return '';
   }
 
   private updateTriggerObjectives(): void {
@@ -378,7 +359,6 @@ export class LevelOneScene extends Phaser.Scene {
     if (id.includes('wall')) return 'wallJump';
     if (id.includes('attack') || id.includes('combat')) return 'attack';
     if (id.includes('keycard')) return 'keycard';
-    if (id.includes('hazard')) return 'avoid';
     return 'move';
   }
 
@@ -404,13 +384,11 @@ export class LevelOneScene extends Phaser.Scene {
       && this.player.y <= rect.y + rect.height;
   }
 
-  private restoreProgressFromCheckpoint(): void {
-    const movementDoor = levelOne.doors.find((door) => door.requiresObjective === 'movement');
-    const combatDoor = levelOne.doors.find((door) => door.requiresObjective === 'combat');
-    if (this.checkpoint.hasKeycard || (movementDoor && this.checkpoint.x > movementDoor.x + movementDoor.width)) {
+  private restoreProgressFromSave(): void {
+    if (this.saveState.hasKeycard || this.saveState.x >= 720) {
       this.completedObjectives.add('movement');
     }
-    if (this.checkpoint.hasKeycard || (combatDoor && this.checkpoint.x > combatDoor.x + combatDoor.width)) {
+    if (this.saveState.hasKeycard || this.saveState.x >= 3290) {
       this.completedObjectives.add('combat');
     }
   }
@@ -420,21 +398,6 @@ export class LevelOneScene extends Phaser.Scene {
     if (this.completedObjectives.has('combat')) return gameText.guidance.reactor;
     if (this.completedObjectives.has('movement')) return gameText.guidance.hub;
     return gameText.objectives.first;
-  }
-
-  private hazardDamagePayload(hazard: Hazard): DamagePayload {
-    const config = combatConfig.playerDamage.hazard;
-    return {
-      amount: hazard.damage,
-      source: 'hazard',
-      hitX: hazard.x,
-      knockback: config.knockback,
-      stunMs: config.stunMs,
-      invulnerabilityMs: config.invulnerabilityMs,
-      hitstop: config.hitstop,
-      reaction: config.reaction,
-      isFinisher: Boolean(this.player && this.player.health <= hazard.damage),
-    };
   }
 
   private fallDamagePayload(): DamagePayload {

@@ -9,7 +9,7 @@ export class TrooperEnemy extends EnemyBase {
   private windupMs = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame: number, patrolMin: number, patrolMax: number) {
-    super(scene, x, y, texture, frame, enemyConfig.trooper.health, patrolMin, patrolMax);
+    super(scene, x, y, texture, frame, enemyConfig.trooper.health, patrolMin, patrolMax, 'trooper');
   }
 
   updateEnemy(deltaMs: number, player: Player, projectiles: Phaser.Physics.Arcade.Group): void {
@@ -71,6 +71,7 @@ export class TrooperEnemy extends EnemyBase {
       return;
     }
 
+    this.setMovementState('idle', 'aim');
     this.brakeX(moveConfig.deceleration, deltaMs);
     if (this.shootCooldownMs <= 0) {
       this.windupMs = enemyConfig.trooper.windupMs;

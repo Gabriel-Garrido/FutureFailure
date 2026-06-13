@@ -36,7 +36,8 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.enable = true;
-    body.setCircle(fromPlayer ? 5 : 6);
+    const radius = fromPlayer ? 6 : 10;
+    body.setCircle(radius, 8 - radius, 8 - radius);
     body.setVelocity(velocityX, velocityY);
   }
 

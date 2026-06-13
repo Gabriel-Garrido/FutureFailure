@@ -1,9 +1,10 @@
 import { type RectData, type SignpostData, type VisualTileData, type ZoneData } from './levelTypes';
 
-export function platform(id: string, x: number, y: number, width: number, height: number, zone: string, notes?: string): RectData {
+export function platform(id: string, x: number, y: number, width: number, height: number, zone: string, notes?: string, collision: RectData['collision'] = 'solid'): RectData {
   return {
     id,
     type: 'platform',
+    collision,
     x,
     y,
     width,

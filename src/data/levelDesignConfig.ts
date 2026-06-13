@@ -8,7 +8,6 @@ export const levelDesignConfig = {
     minGraphEdges: 9,
     minBranchingNodes: 2,
     minShortcutEdges: 1,
-    maxCheckpointToHighRiskDistance: 520,
     maxGateToInstructionDistance: 420,
   },
   pacing: {
@@ -25,7 +24,7 @@ export const levelDesignConfig = {
   },
   readability: {
     minLandmarks: 4,
-    requiredSignpostRoles: ['criticalPath', 'danger', 'reward', 'shortcut', 'checkpoint', 'exit'],
-    requiredMechanics: ['move', 'jump', 'dash', 'wallJump', 'melee', 'energy', 'hazardTiming', 'keycard', 'arena', 'exit'],
+    requiredSignpostRoles: ['criticalPath', 'danger', 'reward', 'shortcut', 'exit'],
+    requiredMechanics: ['move', 'jump', 'dash', 'wallJump', 'melee', 'energy', 'keycard', 'arena', 'exit'],
   },
 } as const;

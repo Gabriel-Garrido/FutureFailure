@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { assetManifest } from '../assets/assetManifest';
+import { spriteAnimationDefinitions } from '../data/spriteAnimationConfig';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../game/constants';
 
 export class PreloadScene extends Phaser.Scene {
@@ -13,33 +14,29 @@ export class PreloadScene extends Phaser.Scene {
       bar.width = 420 * progress;
     });
     for (const asset of assetManifest) {
-      this.load.spritesheet(asset.key, asset.path, {
-        frameWidth: asset.frameWidth,
-        frameHeight: asset.frameHeight,
-      });
+      if (asset.loadType === 'image') {
+        this.load.image(asset.key, asset.path);
+      } else {
+        this.load.spritesheet(asset.key, asset.path, {
+          frameWidth: asset.frameWidth,
+          frameHeight: asset.frameHeight,
+        });
+      }
     }
   }
 
   create(): void {
-    this.createPlayerAnimations();
+    this.createSpriteAnimations();
     this.scene.start('MainMenuScene');
   }
 
-  private createPlayerAnimations(): void {
-    if (!this.textures.exists('player')) return;
-    const animations = [
-      { key: 'player-idle', frames: [0, 1, 2, 3, 4], frameRate: 8, repeat: -1 },
-      { key: 'player-run', frames: [5, 6, 7, 8, 9], frameRate: 13, repeat: -1 },
-      { key: 'player-jump', frames: [10, 11, 12], frameRate: 10, repeat: -1 },
-      { key: 'player-fall', frames: [12, 13, 14], frameRate: 10, repeat: -1 },
-      { key: 'player-attack', frames: [15, 16, 17, 18, 19], frameRate: 18, repeat: 0 },
-      { key: 'player-dash', frames: [15, 16, 17, 18, 19], frameRate: 20, repeat: -1 },
-    ];
-    for (const animation of animations) {
+  private createSpriteAnimations(): void {
+    for (const animation of spriteAnimationDefinitions()) {
+      if (!this.textures.exists(animation.textureKey)) continue;
       if (this.anims.exists(animation.key)) continue;
       this.anims.create({
         key: animation.key,
-        frames: animation.frames.map((frame) => ({ key: 'player', frame })),
+        frames: animation.frames.map((frame) => ({ key: animation.textureKey, frame })),
         frameRate: animation.frameRate,
         repeat: animation.repeat,
       });

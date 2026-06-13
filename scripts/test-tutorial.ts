@@ -46,7 +46,7 @@ for (const text of Object.values(gameText.terminals)) {
   assertShortText(text, 8, `terminal "${text}"`);
 }
 
-for (const mechanic of ['move', 'jump', 'dash', 'wallJump', 'melee', 'energy', 'hazardTiming', 'keycard', 'arena', 'exit']) {
+for (const mechanic of ['move', 'jump', 'dash', 'wallJump', 'melee', 'energy', 'keycard', 'arena', 'exit']) {
   assert(mechanicActions.has(mechanic as never), `Tutorial actions must cover mechanic ${mechanic}.`);
 }
 

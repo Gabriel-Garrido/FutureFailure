@@ -1,0 +1,28 @@
+{
+    "activeFile": "",
+    "expandedProjectPaths": [
+        "dist/assets",
+        "public/tiles",
+        ".",
+        "dist",
+        "public"
+    ],
+    "fileStates": {
+        "": {
+            "scaleInDock": 1
+        },
+        "#tiles": {
+            "scaleInDock": 0.5,
+            "scaleInEditor": 1
+        },
+        "public/tiles/tiles.tsx": {
+            "scaleInDock": 0.75,
+            "scaleInEditor": 1
+        }
+    },
+    "openFiles": [
+    ],
+    "project": "",
+    "recentFiles": [
+    ]
+}

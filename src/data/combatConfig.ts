@@ -3,7 +3,6 @@ export type DamageSource =
   | 'playerProjectile'
   | 'enemyContact'
   | 'enemyProjectile'
-  | 'hazard'
   | 'fall'
   | 'breakable';
 
@@ -159,10 +158,10 @@ export const combatConfig = {
         cancelDash: true,
         clearInputBuffers: true,
         allowGlobalHitstop: false,
-        retainVelocityX: 0.12,
-        retainVelocityY: 0.85,
-        maxRetainedVelocityX: 86,
-        maxRetainedVelocityY: 520,
+        retainVelocityX: 0,
+        retainVelocityY: 0,
+        maxRetainedVelocityX: 0,
+        maxRetainedVelocityY: 0,
         flashMs: 250,
       },
     },
@@ -184,23 +183,6 @@ export const combatConfig = {
         maxRetainedVelocityX: 0,
         maxRetainedVelocityY: 0,
         flashMs: 270,
-      },
-    },
-    hazard: {
-      knockback: { enabled: true, x: 185, y: -205 },
-      stunMs: 135,
-      invulnerabilityMs: 820,
-      hitstop: { durationMs: 16, timeScale: 0.55 },
-      reaction: {
-        mode: 'knockback',
-        cancelDash: true,
-        clearInputBuffers: true,
-        allowGlobalHitstop: true,
-        retainVelocityX: 0,
-        retainVelocityY: 0,
-        maxRetainedVelocityX: 0,
-        maxRetainedVelocityY: 0,
-        flashMs: 260,
       },
     },
     fall: {

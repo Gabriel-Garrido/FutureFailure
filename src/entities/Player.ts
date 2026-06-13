@@ -10,9 +10,11 @@ import { ParticleSystem } from '../systems/ParticleSystem';
 export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly movement: MovementController;
   readonly attackZone: Phaser.GameObjects.Zone;
+  readonly projectileHurtZone: Phaser.GameObjects.Zone;
   health = 5;
   maxHealth = 5;
   energy = 3;
+  maxEnergy = 5;
   hasKeycard = false;
   private attackStage: AttackStage | 0 = 0;
   private lastAttackStage: AttackStage | 0 = 0;
@@ -76,6 +78,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this.attackZone);
     (this.attackZone.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
     (this.attackZone.body as Phaser.Physics.Arcade.Body).enable = false;
+    this.projectileHurtZone = scene.add.zone(x, y - 8, 86, 172);
+    scene.physics.add.existing(this.projectileHurtZone);
+    const hurtBody = this.projectileHurtZone.body as Phaser.Physics.Arcade.Body;
+    hurtBody.setAllowGravity(false);
+    hurtBody.setImmovable(true);
   }
 
   updatePlayer(deltaMs: number, input: InputSnapshot): void {
@@ -90,6 +97,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.updateAttackState(deltaMs, input);
 
     this.updateAttackZone();
+    this.syncProjectileHurtZone();
     this.updateAnimation();
     this.syncVisual();
     this.updateFeedback(deltaMs);
@@ -151,8 +159,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   addEnergy(amount: number): void {
-    this.energy = Phaser.Math.Clamp(this.energy + amount, 0, 5);
-    this.scene.game.events.emit(EVENTS.energyChanged, this.energy, 5);
+    this.energy = Phaser.Math.Clamp(this.energy + amount, 0, this.maxEnergy);
+    this.scene.game.events.emit(EVENTS.energyChanged, this.energy, this.maxEnergy);
   }
 
   giveKeycard(): void {
@@ -170,6 +178,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.visual.setAlpha(1);
     this.visual.setAngle(0);
     this.syncVisual();
+    this.syncProjectileHurtZone();
   }
 
   private updateAttackState(deltaMs: number, input: InputSnapshot): void {
@@ -228,6 +237,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.attackZone.setSize(config.width, config.height);
     body.setSize(config.width, config.height, true);
     body.enable = this.isAttacking();
+  }
+
+  private syncProjectileHurtZone(): void {
+    const body = this.projectileHurtZone.body as Phaser.Physics.Arcade.Body;
+    this.projectileHurtZone.setPosition(this.x, this.y - 8);
+    body.setSize(86, 172, true);
+    body.enable = !this.movement.state.dead;
+    body.updateFromGameObject();
   }
 
   private updateAnimation(): void {

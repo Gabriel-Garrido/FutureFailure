@@ -3,7 +3,7 @@ export class AudioSystem {
 
   constructor(private readonly scene: Phaser.Scene) {}
 
-  blip(kind: 'jump' | 'dash' | 'hit' | 'finisher' | 'hurt' | 'pickup' | 'door' | 'shoot' | 'blocked'): void {
+  blip(kind: 'jump' | 'dash' | 'hit' | 'finisher' | 'hurt' | 'pickup' | 'shoot' | 'blocked'): void {
     const audioContext = this.context ?? this.createContext();
     if (!audioContext) return;
 
@@ -17,7 +17,6 @@ export class AudioSystem {
       finisher: [760, 0.12],
       hurt: [110, 0.09],
       pickup: [880, 0.08],
-      door: [260, 0.16],
       shoot: [520, 0.045],
       blocked: [180, 0.04],
     } satisfies Record<typeof kind, [number, number]>;

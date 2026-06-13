@@ -47,8 +47,10 @@ export class CombatSystem {
       this.applyPlayerDamage(player, payload);
     });
 
-    this.scene.physics.add.overlap(enemyProjectiles, player, (projectileObject) => {
-      const projectile = projectileObject as Projectile;
+    this.scene.physics.add.overlap(enemyProjectiles, player.projectileHurtZone, (objectA, objectB) => {
+      // Group-vs-single overlaps hand the arguments back as (hurtZone, projectile),
+      // so resolve the projectile by type instead of relying on argument order.
+      const projectile = (objectA instanceof Projectile ? objectA : objectB) as Projectile;
       if (!projectile.active) return;
       if (!projectile.consumeImpact()) return;
       const payload = this.enemyProjectilePayload(projectile);

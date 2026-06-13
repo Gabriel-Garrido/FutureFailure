@@ -1,0 +1,30 @@
+export const hudUiConfig = {
+  textureKey: 'ui',
+  frames: {
+    healthFull: 1,
+    healthEmpty: 2,
+    energyFull: 13,
+    energyEmpty: 14,
+    panelCornerTopLeft: 15,
+    panelCornerTopRight: 17,
+    panelCornerBottomLeft: 27,
+    panelCornerBottomRight: 29,
+  },
+  vitals: {
+    x: 16,
+    y: 14,
+    slotWidth: 22,
+    slotHeight: 9,
+    slotGap: 4,
+    rowGap: 27,
+    labelWidth: 70,
+    minPanelWidth: 238,
+    panelHeight: 76,
+  },
+  panels: {
+    cornerSize: 18,
+    objective: { x: 306, y: 14, width: 348, height: 42 },
+    map: { x: 706, y: 16, width: 236, height: 76 },
+    tutorial: { x: 286, y: 436, width: 388, height: 62 },
+  },
+} as const;

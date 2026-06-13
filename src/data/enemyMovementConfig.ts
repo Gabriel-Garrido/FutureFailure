@@ -1,4 +1,4 @@
-export type EnemyMovementState = 'patrol' | 'chase' | 'attackWindup' | 'recover' | 'leash' | 'stunned';
+export type EnemyMovementState = 'idle' | 'patrol' | 'chase' | 'attackWindup' | 'recover' | 'leash' | 'stunned';
 
 export type GroundEnemyMovementConfig = {
   patrolSpeed: number;

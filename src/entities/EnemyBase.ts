@@ -1,7 +1,9 @@
 import { COLORS, DEPTHS, EVENTS } from '../game/constants';
 import { type DamagePayload } from '../data/combatConfig';
+import { type EnemyDropKind } from '../data/dropConfig';
 import { type EnemyMovementState, type GroundEnemyMovementConfig } from '../data/enemyMovementConfig';
 import { gameText } from '../data/gameText';
+import { spriteAnimationKey, type EnemyVisualRole } from '../data/spriteAnimationConfig';
 import { type Player } from './Player';
 
 export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
@@ -12,9 +14,10 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
   protected recoverMs = 0;
   protected knockbackMultiplier = 1;
   protected dead = false;
-  protected movementState: EnemyMovementState = 'patrol';
+  protected movementState: EnemyMovementState = 'idle';
   protected readonly homeX: number;
   protected readonly homeY: number;
+  readonly enemyKind: EnemyDropKind;
 
   constructor(
     scene: Phaser.Scene,
@@ -25,11 +28,13 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     health: number,
     protected readonly patrolMin: number,
     protected readonly patrolMax: number,
+    kind: EnemyDropKind,
   ) {
     super(scene, x, y, texture, frame);
     this.health = health;
     this.homeX = x;
     this.homeY = y;
+    this.enemyKind = kind;
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setDepth(DEPTHS.enemies);
@@ -38,6 +43,7 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(90, 140);
     body.setOffset(60, 48);
+    this.playEnemyAnimation('idle');
   }
 
   abstract updateEnemy(deltaMs: number, player: Player, projectiles: Phaser.Physics.Arcade.Group): void;
@@ -56,6 +62,7 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     this.hitstunMs = payload.stunMs;
     this.recoverMs = Math.max(this.recoverMs, payload.stunMs + 120);
     this.setMovementState('stunned', 'damage');
+    this.playEnemyAnimation('hurt');
     this.setTint(COLORS.cyan);
     if (payload.knockback.enabled) {
       body.setVelocityX(Phaser.Math.Clamp(payload.knockback.x * hitDirection * this.knockbackMultiplier, -380, 380));
@@ -161,6 +168,7 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     if (this.movementState === next) return;
     const previous = this.movementState;
     this.movementState = next;
+    this.playEnemyAnimation(this.animationRoleForState(next));
     this.scene.events.emit(EVENTS.enemyStateChanged, this, previous, next, reason);
   }
 
@@ -168,6 +176,32 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     const projectile = projectiles.get(x, y) as import('./Projectile').Projectile | null;
     if (!projectile) return;
     projectile.fire(x, y, speed * this.direction, 0, false, tint, damage);
+    this.scene.events.emit('enemy-shoot');
+  }
+
+  /**
+   * Fires a projectile aimed at a world target. Essential for airborne enemies,
+   * whose purely horizontal shots would otherwise always sail over a grounded
+   * player. The projectile keeps a constant speed along the aim vector.
+   */
+  protected shootAt(
+    projectiles: Phaser.Physics.Arcade.Group,
+    x: number,
+    y: number,
+    targetX: number,
+    targetY: number,
+    speed: number,
+    tint = COLORS.red,
+    damage = 1,
+  ): void {
+    const projectile = projectiles.get(x, y) as import('./Projectile').Projectile | null;
+    if (!projectile) return;
+    const dx = targetX - x;
+    const dy = targetY - y;
+    const length = Math.hypot(dx, dy) || 1;
+    this.direction = dx >= 0 ? 1 : -1;
+    this.setFlipX(this.direction < 0);
+    projectile.fire(x, y, (dx / length) * speed, (dy / length) * speed, false, tint, damage);
     this.scene.events.emit('enemy-shoot');
   }
 
@@ -191,9 +225,37 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     this.dead = true;
     const x = this.x;
     const y = this.y;
-    this.disableBody(true, true);
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.enable = false;
+    body.setVelocity(0, 0);
+    this.playEnemyAnimation('death');
+    this.scene.tweens.add({
+      targets: this,
+      alpha: 0,
+      delay: 280,
+      duration: 180,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        this.setActive(false);
+        this.setVisible(false);
+      },
+    });
     this.scene.game.events.emit(EVENTS.objectiveChanged, gameText.objectives.securityReduced);
-    this.scene.events.emit(EVENTS.enemyDefeated, x, y, direction, payload);
+    this.scene.events.emit(EVENTS.enemyDefeated, x, y, direction, payload, this.enemyKind);
+  }
+
+  protected playEnemyAnimation(role: EnemyVisualRole): boolean {
+    const key = spriteAnimationKey(this.texture.key, role);
+    if (!this.scene.anims.exists(key)) return false;
+    this.play(key, true);
+    return true;
+  }
+
+  private animationRoleForState(state: EnemyMovementState): EnemyVisualRole {
+    if (state === 'attackWindup') return 'attack';
+    if (state === 'recover' || state === 'stunned') return 'hurt';
+    if (state === 'patrol' || state === 'chase' || state === 'leash') return 'move';
+    return 'idle';
   }
 
   private hasGroundAhead(direction: 1 | -1, probeX: number, probeY: number): boolean {

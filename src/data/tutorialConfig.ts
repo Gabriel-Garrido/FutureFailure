@@ -8,7 +8,6 @@ export type TutorialActionId =
   | 'attack'
   | 'shoot'
   | 'interact'
-  | 'avoid'
   | 'keycard'
   | 'arena'
   | 'exit';
@@ -48,7 +47,6 @@ export const tutorialActions: Record<TutorialActionId, TutorialAction> = {
   attack: { id: 'attack', mechanic: 'melee', keyboard: 'C', gamepad: 'X', touch: 'C', icon: '/', label: 'Espada', verb: 'Ataca' },
   shoot: { id: 'shoot', mechanic: 'energy', keyboard: 'V', gamepad: 'RT', touch: 'V', icon: '*', label: 'Energia', verb: 'Dispara' },
   interact: { id: 'interact', mechanic: 'keycard', keyboard: 'Arriba', gamepad: 'Y', touch: '^', icon: '!', label: 'Usar', verb: 'Interactua' },
-  avoid: { id: 'avoid', mechanic: 'hazardTiming', keyboard: 'X/Z', gamepad: 'A/B', touch: 'X/Z', icon: '!', label: 'Peligro', verb: 'Evita' },
   keycard: { id: 'keycard', mechanic: 'keycard', keyboard: 'Arriba', gamepad: 'Y', touch: '^', icon: 'KEY', label: 'Tarjeta', verb: 'Abre' },
   arena: { id: 'arena', mechanic: 'arena', keyboard: 'C/V/Z', gamepad: 'X/RT/B', touch: 'C/V/Z', icon: '!!', label: 'Arena', verb: 'Limpia' },
   exit: { id: 'exit', mechanic: 'exit', keyboard: '->', gamepad: '->', touch: '->', icon: 'OUT', label: 'Salida', verb: 'Entra' },

@@ -10,7 +10,7 @@ export class DroneEnemy extends EnemyBase {
   private ageMs = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame: number, patrolMin: number, patrolMax: number) {
-    super(scene, x, y, texture, frame, enemyConfig.drone.health, patrolMin, patrolMax);
+    super(scene, x, y, texture, frame, enemyConfig.drone.health, patrolMin, patrolMax, 'drone');
     this.knockbackMultiplier = 1.15;
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
@@ -42,7 +42,8 @@ export class DroneEnemy extends EnemyBase {
       this.windupMs -= deltaMs;
       if (this.windupMs <= 0) {
         if (this.hitFlashMs <= 0) this.clearTint();
-        this.shoot(projectiles, this.x + this.direction * 24, this.y, 240, COLORS.red, enemyConfig.drone.damage);
+        const aimDir = player.x >= this.x ? 1 : -1;
+        this.shootAt(projectiles, this.x + aimDir * 24, this.y, player.x, player.y - 8, 240, COLORS.red, enemyConfig.drone.damage);
         this.shootCooldownMs = enemyConfig.drone.shootCooldownMs;
       }
       return;

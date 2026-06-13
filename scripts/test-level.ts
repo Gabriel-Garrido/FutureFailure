@@ -1,5 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { frameBoundsFor } from '../src/data/assetMap';
 import { frameFor } from '../src/data/assetMap';
+import { assetManifest } from '../src/assets/assetManifest';
+import { elementSprites, portalVisualRect } from '../src/data/elementSpriteConfig';
+import { dropConfig } from '../src/data/dropConfig';
 import { levelDesignConfig } from '../src/data/levelDesignConfig';
 import { levelOne } from '../src/data/levelOne';
 import { type FlowBeatData, type LevelGraphEdgeData, type RectData } from '../src/data/levelTypes';
@@ -34,10 +39,6 @@ function byId<T extends { id?: string }>(items: T[], id: string): T {
   return item;
 }
 
-function rectCenterX(rect: RectData): number {
-  return rect.x + rect.width / 2;
-}
-
 function beatWidth(beat: FlowBeatData): number {
   return beat.endX - beat.startX;
 }
@@ -57,7 +58,6 @@ function graphHasPath(startNodeId: string, exitNodeId: string, edges: LevelGraph
   return false;
 }
 
-const hazardBounds = frameBoundsFor.hazards as Record<number, unknown>;
 const destructibleBounds = frameBoundsFor.destructibles as Record<number, unknown>;
 const tileBounds = frameBoundsFor.tiles as Record<number, unknown>;
 
@@ -70,12 +70,9 @@ for (const item of [
   ...levelOne.walls,
   ...levelOne.platforms,
   ...levelOne.decorations,
-  ...levelOne.hazards,
   ...levelOne.pickups,
   ...levelOne.destructibles,
   ...levelOne.enemies,
-  ...levelOne.doors,
-  ...levelOne.checkpoints,
   ...levelOne.terminals,
   ...levelOne.triggers,
   ...levelOne.tutorialPrompts,
@@ -86,10 +83,19 @@ for (const item of [
   assert(!ids.has(item.id), `Duplicated level id: ${item.id}`);
   ids.add(item.id);
 }
+for (const destructible of levelOne.destructibles) {
+  if (!destructible.drop) continue;
+  assert(Boolean(destructible.drop.id), `${destructible.id} drop is missing an id.`);
+  assert(!ids.has(destructible.drop.id), `Duplicated level id: ${destructible.drop.id}`);
+  ids.add(destructible.drop.id);
+}
 
 assert(levelOne.metadata.name.includes('Future Failure'), 'Level metadata must use the Future Failure name.');
 assert(levelOne.width >= 5200, 'Level one should have enough horizontal room for tutorial, reactor and arena.');
 assert(levelOne.finalPortal.x > levelOne.width - 220, 'Exit portal must be clearly placed at the right edge.');
+const levelBackground = assetManifest.find((entry) => entry.key === levelOne.backgroundKey);
+assert(Boolean(levelBackground), 'Level one must reference an existing background asset.');
+assert(levelBackground?.category === 'background' && levelBackground.loadType === 'image', 'Level one background must be an image background asset.');
 
 const ceiling = byId(levelOne.walls, 'wall-ceiling');
 assert(ceiling.x === 0 && ceiling.y === 0 && ceiling.width >= levelOne.width, 'Level must have a full ceiling wall.');
@@ -97,6 +103,37 @@ assert(ceiling.x === 0 && ceiling.y === 0 && ceiling.width >= levelOne.width, 'L
 for (const rect of [...levelOne.walls, ...levelOne.platforms, levelOne.finalPortal]) {
   assert(insideWorld(rect), `${rect.id ?? 'rect'} is outside level bounds.`);
 }
+
+assert(elementSprites.doors.portal.frame === 35, 'Final portal must use only the verified doors frame 35.');
+const finalPortalVisual = portalVisualRect(levelOne.finalPortal);
+assert(insideWorld(finalPortalVisual), 'Final portal visual must stay inside the level bounds.');
+const rightWall = byId(levelOne.walls, 'wall-right-bound');
+assert(levelOne.finalPortal.x + levelOne.finalPortal.width <= rightWall.x, 'Final portal overlap zone must not intersect the right wall.');
+const levelBuilderSource = fs.readFileSync(path.join(process.cwd(), 'src/systems/LevelBuilder.ts'), 'utf8');
+const levelSceneSource = fs.readFileSync(path.join(process.cwd(), 'src/scenes/LevelOneScene.ts'), 'utf8');
+const levelOneSource = fs.readFileSync(path.join(process.cwd(), 'src/data/levelOne.ts'), 'utf8');
+const levelTypesSource = fs.readFileSync(path.join(process.cwd(), 'src/data/levelTypes.ts'), 'utf8');
+assert(!levelBuilderSource.includes('portal-idle'), 'Final portal must not use the invalid doors 30..35 frame animation.');
+assert(!levelSceneSource.includes('collider(this.player, this.level.finalPortal'), 'Final portal must not be connected as a solid collider.');
+assert(levelSceneSource.includes('overlap(this.player, this.level.finalPortal'), 'Final portal should remain an overlap-only exit zone.');
+assert(!fs.existsSync(path.join(process.cwd(), 'src/entities/Door.ts')), 'Door entity must stay removed.');
+assert(!levelBuilderSource.includes('../entities/Door'), 'LevelBuilder must not import or instantiate Door.');
+assert(!levelSceneSource.includes('nearbyDoor') && !levelSceneSource.includes('isDoorRequirementMet'), 'LevelOneScene must not keep door interaction state.');
+assert(!levelTypesSource.includes('DoorData') && !levelTypesSource.includes('doors:'), 'Level types must not expose door data.');
+assert(!levelOneSource.includes('doors: [') && !levelOneSource.includes('gateId:'), 'LevelOne must not define door objects or door gate references.');
+assert(!fs.existsSync(path.join(process.cwd(), 'src/entities/Checkpoint.ts')), 'Checkpoint entity must stay removed.');
+assert(!levelBuilderSource.includes('../entities/Checkpoint'), 'LevelBuilder must not import or instantiate Checkpoint.');
+assert(!levelSceneSource.includes('activateCheckpoint') && !levelSceneSource.includes('level.checkpoints'), 'LevelOneScene must not keep checkpoint activation state.');
+assert(!levelTypesSource.includes('CheckpointData') && !levelTypesSource.includes('checkpoints:'), 'Level types must not expose checkpoint data.');
+assert(!levelOneSource.includes('checkpoints: [') && !levelOneSource.includes('checkpointId:'), 'LevelOne must not define checkpoint objects or checkpoint beat references.');
+assert(!fs.existsSync(path.join(process.cwd(), 'src/entities/Hazard.ts')), 'Static Hazard entity must stay removed.');
+assert(!levelBuilderSource.includes('../entities/Hazard'), 'LevelBuilder must not import or instantiate Hazard.');
+assert(!levelSceneSource.includes('hazardDamagePayload') && !levelSceneSource.includes('level.hazards'), 'LevelOneScene must not keep static hazard damage state.');
+assert(!levelTypesSource.includes('HazardData') && !levelTypesSource.includes('hazards:'), 'Level types must not expose static hazard data.');
+assert(!levelOneSource.includes('hazards: [') && !levelOneSource.includes('hazardTiming'), 'LevelOne must not define static damage hazards or hazard timing tests.');
+const spriteFitSource = fs.readFileSync(path.join(process.cwd(), 'src/systems/spriteFit.ts'), 'utf8');
+assert(spriteFitSource.includes('setCrop'), 'Sprite fitting must clip every element to its measured opaque bounds to prevent packed-sheet edge bleed.');
+assert(spriteFitSource.includes('cropToOpaqueBounds'), 'Edge-bleed cropping must be a reusable helper so all element renderers share it.');
 
 const solidVisualKeys = new Set(levelOne.visualTiles.filter((tile) => tile.category === 'tiles').map(rectKey));
 const solidVisuals = new Map(levelOne.visualTiles.filter((tile) => tile.category === 'tiles').map((tile) => [rectKey(tile), tile]));
@@ -118,36 +155,57 @@ for (const decoration of levelOne.decorations) {
   assert(decoration.category !== 'tiles', `${decoration.id} decoration should not use platform tile category.`);
 }
 
-for (const hazard of levelOne.hazards) {
-  assert(Boolean(hazard.visual), `${hazard.id} must define a visual rect separate from the damage collider.`);
-  if (hazard.visual) assert(contains(hazard.visual, hazard, 8), `${hazard.id} damage collider must fit inside its sprite visual.`);
-  assert(hazard.frame !== undefined, `${hazard.id} must choose an explicit hazard sprite frame.`);
-  assert(Boolean(hazardBounds[hazard.frame ?? -1]), `${hazard.id} uses a hazard frame without measured opaque bounds.`);
-}
-
 for (const destructible of levelOne.destructibles) {
   assert(Boolean(destructibleBounds[destructible.frame]), `${destructible.id} uses a destructible frame without measured opaque bounds.`);
   assert(destructible.health > 0, `${destructible.id} must have positive health.`);
+  if (destructible.drop) {
+    assert([3, 5].includes(destructible.health), `${destructible.id} contains an item and must take 3 or 5 hits to open.`);
+    assert(Boolean(destructible.damagedFrame) && Boolean(destructible.destroyedFrame) && Boolean(destructible.debrisFrame), `${destructible.id} must define damaged, destroyed and debris frames.`);
+    for (const frame of [destructible.damagedFrame, destructible.destroyedFrame, destructible.debrisFrame]) {
+      assert(Boolean(destructibleBounds[frame ?? -1]), `${destructible.id} destruction frame ${frame} has no measured opaque bounds.`);
+    }
+    const riseY = destructible.drop.riseY ?? 46;
+    const targetY = destructible.y + destructible.height / 2 + (destructible.drop.offsetY ?? 0) - riseY;
+    assert(riseY >= 24 && riseY <= 80, `${destructible.id} drop rise should stay readable and short.`);
+    assert(targetY >= 80 && targetY <= levelOne.height - 80, `${destructible.id} drop target is outside safe world bounds.`);
+  } else {
+    assert(destructible.health === 1, `${destructible.id} is empty and should remain a quick 1-hit object.`);
+  }
 }
+const destructibleDrops = levelOne.destructibles.flatMap((destructible) => destructible.drop ? [destructible.drop] : []);
+const emptyBreakables = levelOne.destructibles.filter((destructible) => !destructible.drop);
+assert(destructibleDrops.some((drop) => drop.type === 'healthSmall' || drop.type === 'healthLarge'), 'LevelOne must place health rewards inside breakable boxes.');
+assert(destructibleDrops.some((drop) => drop.type === 'energyCell'), 'LevelOne must place energy rewards inside breakable boxes.');
+assert(destructibleDrops.every((drop) => !['upgradeChip', 'dataShard'].includes(String(drop.type))), 'Energy rewards must use only the canonical energyCell pickup.');
+assert(emptyBreakables.length >= 3, 'LevelOne should include several empty breakable boxes.');
+assert(levelOne.pickups.every((pickup) => pickup.type === 'keycard'), 'LevelOne resource pickups should be hidden inside breakables; only key items stay loose.');
+const pickupSource = fs.readFileSync(path.join(process.cwd(), 'src/entities/Pickup.ts'), 'utf8');
+assert(pickupSource.includes('revealFromBreakable'), 'Pickup must expose a breakable reveal animation.');
+assert(pickupSource.includes('durationMs = 500'), 'Breakable pickup reveal should default to 0.5 seconds.');
+assert(pickupSource.includes("this.pickupType === 'energyCell'") && !pickupSource.includes("this.pickupType === 'upgradeChip'"), 'Only energyCell should grant energy to the player.');
+const breakableSource = fs.readFileSync(path.join(process.cwd(), 'src/entities/BreakableObject.ts'), 'utf8');
+assert(breakableSource.includes('spawnHitSparks'), 'Breakables must create a visible hit effect.');
+assert(breakableSource.includes('playBreakAnimation'), 'Breakables must animate through destruction frames.');
+assert(breakableSource.includes('body.enable = false') && !breakableSource.includes('disableBody(true, true)'), 'Destroyed breakables must remain visible as debris without collision.');
+assert(dropConfig.revealDurationMs === 500, 'Drop reveal duration must be the requested 0.5s jump.');
+assert(pickupSource.includes('!this.collectible'), 'Pickup collection must be blocked while the reveal animation is active.');
+assert(levelSceneSource.includes('spawnBreakableDrop'), 'LevelOneScene must spawn drops from broken breakables.');
+assert(levelSceneSource.includes('spawnEnemyDrop'), 'LevelOneScene must spawn drops from defeated enemies.');
+assert(levelSceneSource.includes('revealFromBreakable(targetY, dropConfig.revealDurationMs'), 'Drops must use the shared 0.5s reveal duration.');
 
-const movementDoor = byId(levelOne.doors, 'movement-door');
 const movementTrigger = byId(levelOne.triggers, 'trigger-movement-complete');
-assert(movementTrigger.x < movementDoor.x, 'Movement objective must unlock before the movement door.');
+assert(movementTrigger.x >= 620 && movementTrigger.x <= 820, 'Movement objective trigger should remain at the end of the first movement lesson.');
 
-const combatDoor = byId(levelOne.doors, 'combat-door');
 const firstTrooper = byId(levelOne.enemies, 'enemy-security-trooper');
-assert(firstTrooper.x < combatDoor.x, 'Combat door must be after the first combat target.');
-assert(levelOne.checkpoints.some((checkpoint) => checkpoint.x < firstTrooper.x && checkpoint.x > movementDoor.x), 'A checkpoint should sit before the first combat target.');
+assert(firstTrooper.x > movementTrigger.x, 'First combat target should remain after the movement lesson.');
 
-const keycardDoor = byId(levelOne.doors, 'keycard-door');
 const keycard = byId(levelOne.pickups, 'pickup-reactor-keycard');
-assert(keycard.x < keycardDoor.x, 'Keycard pickup must appear before the keycard door.');
-assert(levelOne.finalPortal.x > keycardDoor.x, 'Final exit must be after the keycard door.');
+assert(keycard.x < levelOne.finalPortal.x, 'Keycard pickup must appear before the final exit.');
 
 const arenaEnemies = levelOne.enemies.filter((enemy) => enemy.zone === 'arena');
 assert(arenaEnemies.length >= 2, 'Final arena should have at least two enemies.');
 for (const enemy of arenaEnemies) {
-  assert(enemy.x > keycardDoor.x, `${enemy.id} must be after the keycard door.`);
+  assert(enemy.x > keycard.x, `${enemy.id} must be after the keycard pickup.`);
 }
 
 const markerXs = levelOne.mapMarkers.map((marker) => marker.x);
@@ -166,9 +224,6 @@ const rewardIds = new Set([
   ...levelOne.pickups.map((entry) => entry.id),
   ...levelOne.destructibles.map((entry) => entry.id),
 ]);
-const doorIds = new Set(levelOne.doors.map((entry) => entry.id));
-const checkpointIds = new Set(levelOne.checkpoints.map((entry) => entry.id));
-
 let previousBeatStart = -Infinity;
 let previousIntensity: number | undefined;
 let consecutiveHighIntensity = 0;
@@ -192,19 +247,8 @@ for (const beat of levelOne.design.criticalPath) {
   assert(beatWidth(beat) <= levelDesignConfig.flow.maxBeatWidth, `${beat.id} is too wide; split it into smaller readable beats.`);
   assert((beat.teaches?.length ?? 0) + (beat.tests?.length ?? 0) > 0, `${beat.id} must teach or test at least one mechanic.`);
   for (const mechanic of [...beat.teaches ?? [], ...beat.tests ?? []]) taughtMechanics.add(mechanic);
-  if (beat.gateId) assert(doorIds.has(beat.gateId), `${beat.id} references missing gate ${beat.gateId}.`);
-  if (beat.checkpointId) assert(checkpointIds.has(beat.checkpointId), `${beat.id} references missing checkpoint ${beat.checkpointId}.`);
   for (const rewardId of beat.rewardIds ?? []) assert(rewardIds.has(rewardId), `${beat.id} references missing reward ${rewardId}.`);
-  if (beat.risk === 'high') {
-    const hasCloseCheckpoint = levelOne.checkpoints.some((checkpoint) => checkpoint.x <= beat.startX + 120 && Math.abs(checkpoint.x - beat.startX) <= levelDesignConfig.flow.maxCheckpointToHighRiskDistance);
-    assert(Boolean(beat.checkpointId) || hasCloseCheckpoint, `${beat.id} is high risk without a nearby checkpoint.`);
-  }
-  if (beat.gateId) {
-    const gate = byId(levelOne.doors, beat.gateId);
-    const hasNearbyPrompt = levelOne.tutorialPrompts.some((prompt) => Math.abs(rectCenterX(prompt) - gate.x) <= levelDesignConfig.flow.maxGateToInstructionDistance);
-    const hasNearbyTerminal = levelOne.terminals.some((terminal) => Math.abs(terminal.x - gate.x) <= levelDesignConfig.flow.maxGateToInstructionDistance);
-    assert(hasNearbyPrompt || hasNearbyTerminal, `${beat.gateId} needs nearby instructional context.`);
-  }
+  if (beat.risk === 'high') assert(beat.pace === 'synthesis', `${beat.id} high-risk beats should be reserved for synthesis sections without checkpoints.`);
 }
 
 for (const mechanic of levelDesignConfig.readability.requiredMechanics) {
@@ -251,7 +295,6 @@ for (const edge of graph.edges) {
   assert(graphNodeIds.has(edge.from), `${edge.id} references missing from node ${edge.from}.`);
   assert(graphNodeIds.has(edge.to), `${edge.id} references missing to node ${edge.to}.`);
   outDegree.set(edge.from, (outDegree.get(edge.from) ?? 0) + 1);
-  if (edge.gateId) assert(doorIds.has(edge.gateId), `${edge.id} references missing gate ${edge.gateId}.`);
   for (const rewardId of edge.rewardIds ?? []) assert(rewardIds.has(rewardId), `${edge.id} references missing reward ${rewardId}.`);
   if (edge.kind === 'optional' || edge.kind === 'reward') {
     assert((edge.rewardIds?.length ?? 0) > 0, `${edge.id} optional/reward edge must define rewardIds.`);
@@ -291,6 +334,29 @@ for (const platform of levelOne.platforms) {
   }
 }
 
+// Foreground gameplay elements must not visually punch through one another.
+// Resting/standing contacts (<= OVERLAP_TOLERANCE px on an axis) are allowed, as
+// are background decorations (they render behind terrain and are always occluded).
+const OVERLAP_TOLERANCE = 4;
+type FootBox = { id: string; kind: string; x: number; y: number; w: number; h: number };
+
+function bothAxesOverlap(a: FootBox, b: FootBox): boolean {
+  const dx = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+  const dy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  return dx > OVERLAP_TOLERANCE && dy > OVERLAP_TOLERANCE;
+}
+
+const breakableBoxes: FootBox[] = levelOne.destructibles.map((d) => ({ id: d.id, kind: 'breakable', x: d.x, y: d.y, w: d.width, h: d.height }));
+const terminalBoxes: FootBox[] = levelOne.terminals.map((t) => ({ id: t.id, kind: 'terminal', x: t.x - 42, y: t.y - 102, w: 84, h: 96 }));
+
+// Breakables must stand clear of terminals and each other.
+const breakableBlockers = [...breakableBoxes, ...terminalBoxes];
+for (let i = 0; i < breakableBoxes.length; i += 1) {
+  for (const other of breakableBlockers) {
+    if (breakableBoxes[i].id === other.id) continue;
+    assert(!bothAxesOverlap(breakableBoxes[i], other), `${breakableBoxes[i].id} overlaps ${other.kind} ${other.id}.`);
+  }
+}
 const arenaZone = byId(levelOne.zones, 'zone-arena');
 assert(arenaZone.width >= levelDesignConfig.traversal.minArenaWidth, 'Final arena must provide enough width for readable enemy states.');
 const sortedArenaEnemies = levelOne.enemies.filter((enemy) => enemy.zone === 'arena').sort((a, b) => a.x - b.x);

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { assetKey } from '../data/assetMap';
+import { elementSprites } from '../data/elementSpriteConfig';
 import { gameText } from '../data/gameText';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../game/constants';
 import { SaveSystem } from '../systems/SaveSystem';
@@ -44,7 +45,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.add.circle(GAME_WIDTH / 2, 154, 96, COLORS.purple, 0.06);
     this.add.circle(GAME_WIDTH / 2, 154, 58, COLORS.cyan, 0.05);
     if (!key || !this.textures.exists(key)) return;
-    const portal = this.add.sprite(GAME_WIDTH / 2, 148, key, 35);
+    const portal = this.add.sprite(GAME_WIDTH / 2, 148, key, elementSprites.doors.portal.frame);
     portal.setScale(0.76).setAlpha(0.32);
     this.tweens.add({
       targets: portal,

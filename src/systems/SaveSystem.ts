@@ -1,5 +1,4 @@
 export type SaveState = {
-  checkpointId: string;
   x: number;
   y: number;
   health: number;

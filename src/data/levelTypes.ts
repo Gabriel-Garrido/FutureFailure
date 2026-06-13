@@ -1,6 +1,7 @@
 export type RectData = {
   id?: string;
   type?: string;
+  collision?: 'solid' | 'oneWay';
   x: number;
   y: number;
   width: number;
@@ -10,7 +11,7 @@ export type RectData = {
   notes?: string;
 };
 
-export type VisualCategory = 'tiles' | 'props' | 'hazards' | 'doors' | 'pickups' | 'interactables' | 'destructibles';
+export type VisualCategory = 'tiles' | 'props' | 'doors' | 'pickups' | 'interactables' | 'destructibles';
 
 export type VisualTileData = RectData & {
   frame?: number;
@@ -34,19 +35,9 @@ export type EnemyData = {
   notes?: string;
 };
 
-export type HazardData = RectData & {
-  id: string;
-  type: 'spikes' | 'laser' | 'acid' | 'steam';
-  damage: number;
-  frame?: number;
-  visual?: RectData;
-  cycleMs?: number;
-  warningMs?: number;
-};
-
 export type PickupData = {
   id: string;
-  type: 'healthSmall' | 'healthLarge' | 'energyCell' | 'keycard' | 'upgradeChip' | 'dataShard';
+  type: 'healthSmall' | 'healthLarge' | 'energyCell' | 'keycard';
   x: number;
   y: number;
   zone: string;
@@ -54,33 +45,27 @@ export type PickupData = {
   notes?: string;
 };
 
+export type BreakableDropData = {
+  id: string;
+  type: PickupData['type'];
+  offsetX?: number;
+  offsetY?: number;
+  riseY?: number;
+};
+
 export type BreakableData = RectData & {
   id: string;
   type: 'crate' | 'barrel' | 'canister';
   frame: number;
   health: number;
+  damagedFrame?: number;
+  destroyedFrame?: number;
+  debrisFrame?: number;
+  drop?: BreakableDropData;
   isFunctional: true;
 };
 
-export type DoorRequirement = 'movement' | 'combat' | 'arena';
-
-export type DoorData = RectData & {
-  id: string;
-  type: 'door';
-  requiresKeycard?: boolean;
-  requiresObjective?: DoorRequirement;
-  target?: string;
-  isFunctional: true;
-};
-
-export type CheckpointData = {
-  id: string;
-  type: 'checkpoint';
-  x: number;
-  y: number;
-  zone: string;
-  isFunctional: true;
-};
+export type ObjectiveRequirement = 'movement' | 'combat' | 'arena';
 
 export type TerminalData = {
   id: string;
@@ -112,7 +97,7 @@ export type TutorialPromptData = RectData & {
 export type MapMarkerData = {
   x: number;
   label: string;
-  type: 'checkpoint' | 'door' | 'key' | 'arena' | 'exit';
+  type: 'start' | 'key' | 'arena' | 'exit';
 };
 
 export type PlayerSpawnData = {
@@ -131,7 +116,6 @@ export type LevelMechanic =
   | 'wallJump'
   | 'melee'
   | 'energy'
-  | 'hazardTiming'
   | 'keycard'
   | 'arena'
   | 'exit';
@@ -148,8 +132,6 @@ export type FlowBeatData = {
   targetIntensity: 1 | 2 | 3 | 4 | 5;
   teaches?: LevelMechanic[];
   tests?: LevelMechanic[];
-  gateId?: string;
-  checkpointId?: string;
   rewardIds?: string[];
   risk: 'safe' | 'low' | 'medium' | 'high';
   notes?: string;
@@ -160,7 +142,7 @@ export type LevelGraphNodeData = {
   label: string;
   beatId: string;
   x: number;
-  kind: 'start' | 'skillCheck' | 'gate' | 'reward' | 'shortcut' | 'arena' | 'exit';
+  kind: 'start' | 'skillCheck' | 'reward' | 'shortcut' | 'arena' | 'exit';
   landmarkId?: string;
 };
 
@@ -170,7 +152,6 @@ export type LevelGraphEdgeData = {
   to: string;
   kind: 'critical' | 'optional' | 'shortcut' | 'return' | 'reward';
   unlock?: OptionalRouteData['unlock'];
-  gateId?: string;
   tests?: LevelMechanic[];
   rewardIds?: string[];
   notes?: string;
@@ -189,7 +170,7 @@ export type OptionalRouteData = {
   fromBeatId: string;
   toBeatId: string;
   rewardIds: string[];
-  unlock?: 'none' | 'keycard' | `objective:${DoorRequirement}`;
+  unlock?: 'none' | 'keycard' | `objective:${ObjectiveRequirement}`;
   risk: 'low' | 'medium' | 'high';
   notes?: string;
 };
@@ -197,7 +178,7 @@ export type OptionalRouteData = {
 export type SignpostData = RectData & {
   id: string;
   type: 'signpost';
-  role: 'criticalPath' | 'danger' | 'reward' | 'shortcut' | 'checkpoint' | 'exit';
+  role: 'criticalPath' | 'danger' | 'reward' | 'shortcut' | 'exit';
   direction?: 1 | -1;
   intensity?: 'subtle' | 'normal' | 'strong';
   isFunctional: false;
@@ -220,6 +201,7 @@ export type LevelData = {
   };
   width: number;
   height: number;
+  backgroundKey?: string;
   cameraBounds: RectData;
   playerSpawn: PlayerSpawnData;
   zones: ZoneData[];
@@ -228,12 +210,9 @@ export type LevelData = {
   walls: RectData[];
   visualTiles: VisualTileData[];
   decorations: VisualTileData[];
-  hazards: HazardData[];
   pickups: PickupData[];
   destructibles: BreakableData[];
   enemies: EnemyData[];
-  doors: DoorData[];
-  checkpoints: CheckpointData[];
   interactables: TerminalData[];
   terminals: TerminalData[];
   triggers: TriggerData[];

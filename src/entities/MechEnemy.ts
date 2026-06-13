@@ -1,48 +1,73 @@
 import { enemyConfig } from '../data/enemyConfig';
 import { enemyMovementConfig } from '../data/enemyMovementConfig';
-import { COLORS } from '../game/constants';
+import { COLORS, DEPTHS } from '../game/constants';
 import { EnemyBase } from './EnemyBase';
 import { type Player } from './Player';
+
+type MechIntent = 'patrol' | 'holdRange' | 'retreat' | 'windup' | 'recover';
 
 export class MechEnemy extends EnemyBase {
   private shootCooldownMs = 900;
   private windupMs = 0;
+  private recoverAfterBurstMs = 0;
+  private intent: MechIntent = 'patrol';
+  private readonly glow: Phaser.GameObjects.Ellipse;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame: number, patrolMin: number, patrolMax: number) {
-    super(scene, x, y, texture, frame, enemyConfig.mech.health, patrolMin, patrolMax);
-    this.knockbackMultiplier = 0.48;
-    this.setScale(0.42);
+    super(scene, x, y, texture, frame, enemyConfig.mech.health, patrolMin, patrolMax, 'mech');
+    this.knockbackMultiplier = 0.34;
+    this.setScale(0.5);
+    this.setOrigin(0.5, 0.62);
+
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(118, 165);
-    body.setOffset(46, 34);
+    body.setSize(104, 148);
+    body.setOffset(52, 44);
+    body.setMaxVelocity(150, 680);
+
+    this.glow = scene.add.ellipse(this.x, this.y + 34, 96, 22, COLORS.red, 0.08)
+      .setDepth(DEPTHS.enemies - 1)
+      .setBlendMode(Phaser.BlendModes.ADD);
   }
 
   updateEnemy(deltaMs: number, player: Player, projectiles: Phaser.Physics.Arcade.Group): void {
-    if (this.isDead()) return;
+    if (this.isDead()) {
+      this.glow.setVisible(false);
+      return;
+    }
+
+    this.syncGlow();
     const moveConfig = enemyMovementConfig.mech;
     if (this.tickDamageState(deltaMs)) {
-      this.windupMs = 0;
+      this.cancelAttack();
+      this.setGlow(COLORS.cyan, 0.16);
       return;
     }
     if (this.tickRecover(deltaMs, moveConfig.deceleration)) {
-      this.windupMs = 0;
+      this.cancelAttack();
+      this.setGlow(COLORS.cyan, 0.1);
       return;
     }
 
+    const body = this.body as Phaser.Physics.Arcade.Body;
     const distanceX = player.x - this.x;
-    const distanceY = Math.abs(player.y - this.y);
+    const distanceY = player.y - this.y;
     const distance = Math.abs(distanceX);
-    const canSee = distance < enemyConfig.mech.detectRange && distanceY < 130;
+    const canSee = distance < enemyConfig.mech.detectRange && Math.abs(distanceY) < 170;
     this.shootCooldownMs = Math.max(0, this.shootCooldownMs - deltaMs);
+    this.recoverAfterBurstMs = Math.max(0, this.recoverAfterBurstMs - deltaMs);
 
     if (!canSee) {
-      this.windupMs = 0;
+      this.intent = 'patrol';
+      this.cancelAttack();
+      this.setGlow(COLORS.red, 0.06);
       this.patrolWithEdges(moveConfig, deltaMs);
       return;
     }
 
     if (this.shouldLeash(player, moveConfig.leashDistance)) {
-      this.windupMs = 0;
+      this.intent = 'patrol';
+      this.cancelAttack();
+      this.setGlow(COLORS.amber, 0.08);
       if (!this.leashToHome(moveConfig, deltaMs)) this.patrolWithEdges(moveConfig, deltaMs);
       return;
     }
@@ -50,33 +75,113 @@ export class MechEnemy extends EnemyBase {
     this.facePlayer(player);
 
     if (this.windupMs > 0) {
-      this.setMovementState('attackWindup', 'burst');
-      this.brakeX(moveConfig.deceleration, deltaMs);
+      this.intent = 'windup';
+      this.setMovementState('attackWindup', 'mech-charge');
+      this.brakeX(moveConfig.deceleration * 1.2, deltaMs);
       this.windupMs -= deltaMs;
-      if (this.windupMs <= 0) {
-        this.clearTint();
-        for (let i = 0; i < enemyConfig.mech.burstCount; i += 1) {
-          this.scene.time.delayedCall(i * 140, () => {
-            if (!this.isDead()) this.shoot(projectiles, this.x + this.direction * 44, this.y - 24, 270, COLORS.red, enemyConfig.mech.damage);
-          });
-        }
-        this.shootCooldownMs = enemyConfig.mech.shootCooldownMs;
-      }
+      this.setGlow(COLORS.amber, 0.22 + Math.sin(this.windupMs / 45) * 0.06);
+      if (this.windupMs <= 0) this.fireBurst(projectiles, player);
       return;
     }
 
-    if (distance > moveConfig.attackStopDistance) {
-      this.setMovementState('chase', 'approach');
+    if (this.recoverAfterBurstMs > 0) {
+      this.intent = 'recover';
+      this.setMovementState('recover', 'mech-cooldown');
+      this.brakeX(moveConfig.deceleration, deltaMs);
+      this.setGlow(COLORS.red, 0.08);
+      return;
+    }
+
+    if (distance < moveConfig.closeRetreatDistance) {
+      this.intent = 'retreat';
+      this.setMovementState('chase', 'mech-retreat');
+      this.direction = distanceX >= 0 ? -1 : 1;
+      this.setFlipX(this.direction < 0);
+      this.moveTowardVelocityX(moveConfig.chaseSpeed * this.direction, moveConfig.acceleration * 0.95, deltaMs);
+      this.setGlow(COLORS.amber, 0.13);
+      return;
+    }
+
+    if (distance > moveConfig.attackStopDistance + 64) {
+      this.intent = 'holdRange';
+      this.setMovementState('chase', 'mech-pressure');
+      this.direction = distanceX >= 0 ? 1 : -1;
+      this.setFlipX(this.direction < 0);
       this.moveTowardVelocityX(moveConfig.chaseSpeed * this.direction, moveConfig.acceleration, deltaMs);
+      this.setGlow(COLORS.red, 0.1);
       return;
     }
 
+    this.intent = 'holdRange';
+    this.setMovementState('idle', 'mech-aim');
     this.brakeX(moveConfig.deceleration, deltaMs);
+    body.setVelocityX(Phaser.Math.Clamp(body.velocity.x, -75, 75));
+    this.setGlow(COLORS.red, 0.12);
+
     if (this.shootCooldownMs <= 0) {
       this.windupMs = enemyConfig.mech.windupMs;
-      this.setMovementState('attackWindup', 'burst');
       this.setTint(COLORS.amber);
-      this.telegraph(COLORS.amber, 70, enemyConfig.mech.windupMs);
+      this.telegraph(COLORS.amber, 86, enemyConfig.mech.windupMs);
+      this.createAimLine(player);
     }
+  }
+
+  private fireBurst(projectiles: Phaser.Physics.Arcade.Group, player: Player): void {
+    this.clearTint();
+    const muzzleX = this.x + this.direction * 52;
+    const muzzleY = this.y - 34;
+    for (let i = 0; i < enemyConfig.mech.burstCount; i += 1) {
+      this.scene.time.delayedCall(i * 155, () => {
+        if (this.isDead()) return;
+        const targetX = player.x + (i - 1) * 22;
+        const targetY = player.y - 24 + i * 8;
+        this.shootAt(projectiles, muzzleX, muzzleY, targetX, targetY, 285, COLORS.red, enemyConfig.mech.damage);
+        this.kickbackPulse();
+      });
+    }
+    this.shootCooldownMs = enemyConfig.mech.shootCooldownMs;
+    this.recoverAfterBurstMs = 520;
+  }
+
+  private createAimLine(player: Player): void {
+    const line = this.scene.add.line(0, 0, this.x, this.y - 34, player.x, player.y - 24, COLORS.amber, 0.35)
+      .setOrigin(0, 0)
+      .setDepth(DEPTHS.effects);
+    this.scene.tweens.add({
+      targets: line,
+      alpha: 0,
+      duration: enemyConfig.mech.windupMs,
+      ease: 'Cubic.easeOut',
+      onComplete: () => line.destroy(),
+    });
+  }
+
+  private kickbackPulse(): void {
+    this.scene.tweens.add({
+      targets: this,
+      x: this.x - this.direction * 5,
+      duration: 45,
+      yoyo: true,
+      ease: 'Cubic.easeOut',
+    });
+  }
+
+  private cancelAttack(): void {
+    this.windupMs = 0;
+    if (this.intent === 'windup') this.clearTint();
+  }
+
+  private syncGlow(): void {
+    this.glow.setPosition(this.x, this.y + 48);
+    this.glow.setScale(this.flipX ? -1 : 1, 1);
+  }
+
+  private setGlow(color: number, alpha: number): void {
+    this.glow.setFillStyle(color, alpha);
+  }
+
+  destroy(fromScene?: boolean): void {
+    this.glow.destroy();
+    super.destroy(fromScene);
   }
 }

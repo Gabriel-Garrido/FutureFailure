@@ -20,7 +20,6 @@ export const EVENTS = {
   objectiveChanged: 'objective-changed',
   contextChanged: 'context-changed',
   tutorialChanged: 'tutorial-changed',
-  checkpointChanged: 'checkpoint-changed',
   playerDied: 'player-died',
   playerRespawned: 'player-respawned',
   playerPositionChanged: 'player-position-changed',
