@@ -19,17 +19,29 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
 
 # Sistema operativo
 .DS_Store
 Thumbs.db
 desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
 
 # Editores
-.vscode/
 .idea/
 *.swp
 *.swo
+*~
+.project
+.classpath
+.settings/
+
+# VS Code — excluir solo archivos locales de usuario, mantener configuración del proyecto
+.vscode/settings.json
+.vscode/launch.json
+.vscode/*.code-workspace
 
 # Testing / coverage
 coverage/
@@ -40,7 +52,6 @@ tmp/
 temp/
 
 # Cache
-.cache/
 .eslintcache
 vite.config.*.timestamp-*
 vite.config.*.mjs
@@ -50,17 +61,18 @@ vite.config.*.mjs
 
 # Package managers
 .pnpm-store/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
 
-# Si usas Electron
-release/
-out/
+# Tiled map editor
+*.tiled-session
+*.tiled-backup
+*.autosave
 
-# Si usas Capacitor / Cordova
-android/app/build/
-ios/App/build/
-www/
+# Herramientas AI / Codex
+.codex/
+.codex-*/
 
-# No ignores assets del juego
-# public/
-# assets/
-# src/assets/
+# Phaser / game dev
+*.map
