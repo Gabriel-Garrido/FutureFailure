@@ -1,4 +1,7 @@
 import { assetManifest, type AssetManifestEntry } from '../assets/assetManifest';
+import { enemySpriteConfig, type EnemyVisualRole } from './enemySpriteConfig';
+
+export type { EnemyVisualRole } from './enemySpriteConfig';
 
 export type SpriteAnimationDefinition = {
   key: string;
@@ -7,8 +10,6 @@ export type SpriteAnimationDefinition = {
   frameRate: number;
   repeat: number;
 };
-
-export type EnemyVisualRole = 'idle' | 'move' | 'attack' | 'hurt' | 'death';
 
 const assets = assetManifest as readonly AssetManifestEntry[];
 
@@ -19,7 +20,7 @@ export function spriteAnimationKey(textureKey: string, animationId: string): str
 export function spriteAnimationDefinitions(): SpriteAnimationDefinition[] {
   return [
     ...playerAnimations(),
-    ...combatantSheetAnimations(),
+    ...enemyAnimations(),
   ];
 }
 
@@ -35,16 +36,13 @@ function playerAnimations(): SpriteAnimationDefinition[] {
   ];
 }
 
-function combatantSheetAnimations(): SpriteAnimationDefinition[] {
-  return assets
-    .filter((asset) => (asset.category === 'enemy' || asset.category === 'boss') && asset.loadType === 'spritesheet' && asset.columns === 6 && asset.rows === 6)
-    .flatMap((asset) => [
-      animation(asset.key, 'idle', rowFrames(0), 7, -1),
-      animation(asset.key, 'move', rowFrames(1), asset.category === 'boss' ? 8 : 10, -1),
-      animation(asset.key, 'attack', rowFrames(2), asset.category === 'boss' ? 9 : 12, -1),
-      animation(asset.key, 'hurt', rowFrames(3), 13, 0),
-      animation(asset.key, 'death', rowFrames(5), 12, 0),
-    ]);
+function enemyAnimations(): SpriteAnimationDefinition[] {
+  return Object.values(enemySpriteConfig).flatMap((profile) => (
+    Object.entries(profile.animations).flatMap(([role, spec]) => {
+      if (spec.frames.length < 2) return [];
+      return [animation(profile.textureKey, role as EnemyVisualRole, [...spec.frames], spec.frameRate ?? 8, spec.repeat ?? -1)];
+    })
+  ));
 }
 
 function animation(textureKey: string, animationId: string, frames: number[], frameRate: number, repeat: number): SpriteAnimationDefinition {
@@ -55,11 +53,6 @@ function animation(textureKey: string, animationId: string, frames: number[], fr
     frameRate,
     repeat,
   };
-}
-
-function rowFrames(row: number, columns = 6): number[] {
-  const start = row * columns;
-  return Array.from({ length: columns }, (_value, index) => start + index);
 }
 
 function assetExists(key: string): boolean {

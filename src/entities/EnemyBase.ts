@@ -2,6 +2,7 @@ import { COLORS, DEPTHS, EVENTS } from '../game/constants';
 import { type DamagePayload } from '../data/combatConfig';
 import { type EnemyDropKind } from '../data/dropConfig';
 import { type EnemyMovementState, type GroundEnemyMovementConfig } from '../data/enemyMovementConfig';
+import { type EnemySpriteProfile } from '../data/enemySpriteConfig';
 import { gameText } from '../data/gameText';
 import { spriteAnimationKey, type EnemyVisualRole } from '../data/spriteAnimationConfig';
 import { type Player } from './Player';
@@ -23,14 +24,13 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    texture: string,
-    frame: number,
+    protected readonly spriteProfile: EnemySpriteProfile,
     health: number,
     protected readonly patrolMin: number,
     protected readonly patrolMax: number,
     kind: EnemyDropKind,
   ) {
-    super(scene, x, y, texture, frame);
+    super(scene, x, y, spriteProfile.textureKey, spriteProfile.initialFrame);
     this.health = health;
     this.homeX = x;
     this.homeY = y;
@@ -38,11 +38,12 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setDepth(DEPTHS.enemies);
-    this.setScale(0.34);
+    this.setScale(spriteProfile.scale);
+    this.setOrigin(spriteProfile.origin.x, spriteProfile.origin.y);
     this.setCollideWorldBounds(false);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(90, 140);
-    body.setOffset(60, 48);
+    body.setSize(spriteProfile.body.width, spriteProfile.body.height);
+    body.setOffset(spriteProfile.body.offsetX, spriteProfile.body.offsetY);
     this.playEnemyAnimation('idle');
   }
 
@@ -245,8 +246,13 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
   }
 
   protected playEnemyAnimation(role: EnemyVisualRole): boolean {
-    const key = spriteAnimationKey(this.texture.key, role);
-    if (!this.scene.anims.exists(key)) return false;
+    const spec = this.spriteProfile.animations[role];
+    if (!spec) return false;
+    const key = spriteAnimationKey(this.spriteProfile.textureKey, role);
+    if (!this.scene.anims.exists(key)) {
+      this.setFrame(spec.frames[0] ?? this.spriteProfile.initialFrame);
+      return false;
+    }
     this.play(key, true);
     return true;
   }
@@ -258,7 +264,7 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     return 'idle';
   }
 
-  private hasGroundAhead(direction: 1 | -1, probeX: number, probeY: number): boolean {
+  protected hasGroundAhead(direction: 1 | -1, probeX: number, probeY: number): boolean {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const x = this.x + probeX * direction;
     const y = body.y + body.height + probeY;

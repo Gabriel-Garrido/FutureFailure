@@ -32,6 +32,9 @@ assert(combatConfig.projectile.enemy.reaction.mode === 'stagger', 'Enemy project
 assert(combatConfig.projectile.enemy.reaction.allowGlobalHitstop === false, 'Enemy projectile reaction must explicitly block global hitstop.');
 assert(combatConfig.projectile.enemy.reaction.retainVelocityX === 0 && combatConfig.projectile.enemy.reaction.retainVelocityY === 0, 'Enemy projectile damage must stop retained movement instead of moving the player.');
 assert(combatConfig.projectile.enemy.reaction.maxRetainedVelocityX === 0 && combatConfig.projectile.enemy.reaction.maxRetainedVelocityY === 0, 'Enemy projectile damage must not preserve dash-speed or fall-speed movement.');
+assert(combatConfig.projectile.deflect.amount > 0, 'Deflected enemy projectiles must deal damage.');
+assert(combatConfig.projectile.deflect.speed > combatConfig.projectile.player.speed, 'Deflected projectiles should return faster than normal player energy shots.');
+assert(combatConfig.projectile.deflect.hitstop.durationMs > 0, 'Projectile deflects need readable hitstop feedback.');
 assert(combatConfig.playerDamage.contact.invulnerabilityMs > 0, 'Enemy contact damage must grant invulnerability.');
 assert(combatConfig.playerDamage.contact.reaction.mode === 'knockback', 'Enemy contact damage should keep knockback reaction.');
 assert(!('hazard' in combatConfig.playerDamage), 'Static hazard damage config must stay removed.');
@@ -39,6 +42,7 @@ assert(combatConfig.hitRules.hitstopAlwaysResetsToOne, 'Combat config must prese
 assert(combatConfig.hitRules.enemyProjectilesUseGlobalHitstop === false, 'Enemy projectile hitstop rule must stay disabled.');
 assert(combatConfig.hitRules.enemyProjectileDamageIsIdempotent, 'Enemy projectile damage must be idempotent.');
 assert(combatConfig.hitRules.enemyProjectileDamagePreservesPlayerPosition, 'Enemy projectile damage must preserve player position.');
+assert(combatConfig.hitRules.enemyProjectilesCanBeDeflected, 'Enemy projectile deflection rule must stay enabled.');
 
 const eventValues = Object.values(EVENTS);
 assert(new Set(eventValues).size === eventValues.length, 'EVENTS values must be unique.');
@@ -67,15 +71,22 @@ assert(combatSystemSource.includes('cancelHitstop'), 'CombatSystem must be able 
 assert(combatSystemSource.includes('consumeImpact'), 'Enemy projectile overlaps must consume impact idempotently.');
 assert(combatSystemSource.includes('player.projectileHurtZone'), 'Enemy projectile damage must use the stable player projectile hurt zone.');
 assert(combatSystemSource.includes('instanceof Projectile'), 'Enemy projectile overlap must resolve the projectile by type, not by group-vs-single argument order.');
+assert(combatSystemSource.includes('deflectEnemyProjectile'), 'CombatSystem must let melee attacks deflect enemy projectiles.');
+assert(combatSystemSource.includes('projectile.fromPlayer'), 'CombatSystem must distinguish deflected projectiles from hostile projectiles.');
+assert(combatSystemSource.includes("source: 'deflectedProjectile'"), 'Deflected projectile damage must use a semantic damage source.');
 
 const projectileSource = await fs.readFile(path.join(root, 'src/entities/Projectile.ts'), 'utf8');
 assert(projectileSource.includes('hitId'), 'Projectile must expose hitId for damage idempotency.');
 assert(projectileSource.includes('consumeImpact'), 'Projectile must prevent duplicate impact resolution.');
+assert(projectileSource.includes('deflect('), 'Projectile must be able to change ownership when deflected.');
+assert(projectileSource.includes('player-deflect-'), 'Deflected projectiles must receive a fresh player-owned hit id.');
 assert(projectileSource.includes('fromPlayer ? 6 : 10'), 'Enemy projectiles must use a forgiving damage radius.');
 
 const playerSource = await fs.readFile(path.join(root, 'src/entities/Player.ts'), 'utf8');
 assert(playerSource.includes('recentDamageIds'), 'Player must remember recent damage ids.');
 assert(playerSource.includes('projectileHurtZone'), 'Player must expose an animation-independent projectile hurt zone.');
+assert(playerSource.includes('hitConfirmJumpCancelMs'), 'Player attacks must expose hit-confirm jump cancel timing.');
+assert(playerSource.includes('forceJumpPressedThisFrame'), 'Player must preserve jump input when canceling a hit-confirmed attack.');
 assert(!playerSource.includes('this.setPosition('), 'Player damage flow should not reposition the hero body.');
 
 const movementSource = await fs.readFile(path.join(root, 'src/systems/MovementController.ts'), 'utf8');
@@ -88,7 +99,7 @@ function seq(values: number[]): () => number {
   return () => values[Math.min(index++, values.length - 1)];
 }
 
-const enemyDropKinds: EnemyDropKind[] = ['trooper', 'drone', 'mech'];
+const enemyDropKinds: EnemyDropKind[] = ['trooper', 'drone', 'mech', 'scout', 'sentinel'];
 assert(dropConfig.revealDurationMs === 500, 'Drop reveal jump must last 0.5 seconds.');
 for (const kind of enemyDropKinds) {
   const profile = dropConfig.enemies[kind];
@@ -98,6 +109,11 @@ for (const kind of enemyDropKinds) {
   assert(profile.table.every((entry) => !['upgradeChip', 'dataShard'].includes(String(entry.type))), `${kind} must not drop alternate energy pickup types.`);
   const energy = profile.table.find((entry) => entry.type === 'energyCell');
   assert(Boolean(energy), `${kind} drop table must include energy cells.`);
+  const totalWeight = profile.table.reduce((sum, entry) => sum + entry.weight, 0);
+  const healthWeight = profile.table
+    .filter((entry) => entry.type === 'healthSmall' || entry.type === 'healthLarge')
+    .reduce((sum, entry) => sum + entry.weight, 0);
+  assert(healthWeight / totalWeight >= 0.4, `${kind} should have meaningful combined health recovery chance.`);
   const maxOtherWeight = Math.max(...profile.table.filter((entry) => entry.type !== 'energyCell').map((entry) => entry.weight));
   assert((energy?.weight ?? 0) > maxOtherWeight, `${kind} must make energy the single most likely drop.`);
 }

@@ -73,17 +73,17 @@ export class TouchControls {
   }
 
   private createToggle(): Phaser.GameObjects.Text {
-    const bg = this.scene.add.rectangle(GAME_WIDTH - 82, 118, 124, 28, COLORS.darkSteel, 0.72)
-      .setStrokeStyle(1, COLORS.cyan, 0.48)
+    const bg = this.scene.add.rectangle(GAME_WIDTH - 92, GAME_HEIGHT - 218, 116, 24, COLORS.darkSteel, 0.52)
+      .setStrokeStyle(1, COLORS.cyan, 0.3)
       .setScrollFactor(0)
       .setDepth(DEPTHS.ui + 25)
       .setInteractive({ useHandCursor: true });
-    const text = this.scene.add.text(GAME_WIDTH - 82, 118, '', {
+    const text = this.scene.add.text(GAME_WIDTH - 92, GAME_HEIGHT - 218, '', {
       fontFamily: 'Arial',
-      fontSize: '12px',
+      fontSize: '10px',
       color: '#d7fbff',
       stroke: '#031014',
-      strokeThickness: 3,
+      strokeThickness: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTHS.ui + 26);
 
     const toggle = () => this.setControlsVisible(!this.visibleControls);

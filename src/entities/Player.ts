@@ -1,6 +1,7 @@
 import { movementConfig } from '../data/movementConfig';
 import { gameText } from '../data/gameText';
 import { combatConfig, type AttackStage, type AttackStageConfig, type DamagePayload } from '../data/combatConfig';
+import { playerSpriteConfig } from '../data/playerSpriteConfig';
 import { COLORS, DEPTHS, EVENTS } from '../game/constants';
 import { AudioSystem } from '../systems/AudioSystem';
 import { type InputSnapshot } from '../systems/InputSystem';
@@ -20,8 +21,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private lastAttackStage: AttackStage | 0 = 0;
   private attackElapsedMs = 0;
   private attackBufferMs = 0;
+  private attackHitJumpCancelMs = 0;
+  private forceJumpPressedThisFrame = false;
   private comboTimerMs = 0;
   private attackQueued = false;
+  private pendingAttackLungeX = 0;
   private previousGrounded = false;
   private previousDashing = false;
   private lastVelocityY = 0;
@@ -65,20 +69,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     this.setDepth(DEPTHS.player - 1);
     this.setAlpha(0);
-    this.setScale(0.32);
+    this.setScale(playerSpriteConfig.scale);
     this.setCollideWorldBounds(false);
     this.visual = scene.add.sprite(x, y, scene.textures.exists('player') ? 'player' : 'fallback-player');
     this.visual.setDepth(DEPTHS.player);
-    this.visual.setScale(0.32);
+    this.visual.setScale(playerSpriteConfig.scale);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(96, 224);
-    body.setOffset(92, 44);
+    body.setSize(playerSpriteConfig.body.width, playerSpriteConfig.body.height);
+    body.setOffset(playerSpriteConfig.body.offsetX, playerSpriteConfig.body.offsetY);
     this.movement = new MovementController(this, movementConfig);
     this.attackZone = scene.add.zone(x, y, 64, 58);
     scene.physics.add.existing(this.attackZone);
     (this.attackZone.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
     (this.attackZone.body as Phaser.Physics.Arcade.Body).enable = false;
-    this.projectileHurtZone = scene.add.zone(x, y - 8, 86, 172);
+    this.projectileHurtZone = scene.add.zone(x, y + playerSpriteConfig.projectileHurtZone.offsetY, playerSpriteConfig.projectileHurtZone.width, playerSpriteConfig.projectileHurtZone.height);
     scene.physics.add.existing(this.projectileHurtZone);
     const hurtBody = this.projectileHurtZone.body as Phaser.Physics.Arcade.Body;
     hurtBody.setAllowGravity(false);
@@ -87,14 +91,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   updatePlayer(deltaMs: number, input: InputSnapshot): void {
     const wasDashing = this.previousDashing;
-    const movementInput = this.shouldSuppressBurstMovement() ? { ...input, jumpPressed: false, dashPressed: false } : input;
+    this.forceJumpPressedThisFrame = false;
+    this.updateAttackState(deltaMs, input);
+    const baseMovementInput = this.forceJumpPressedThisFrame ? { ...input, jumpPressed: true } : input;
+    const movementInput = this.shouldSuppressBurstMovement() ? { ...baseMovementInput, jumpPressed: false, dashPressed: false } : baseMovementInput;
     this.movement.update(deltaMs, movementInput);
+    this.applyPendingAttackLunge();
     if (this.movement.state.dashing && !wasDashing) {
       this.scene.events.emit('player-dash', this.x, this.y);
       this.audio.blip('dash');
     }
     this.previousDashing = this.movement.state.dashing;
-    this.updateAttackState(deltaMs, input);
 
     this.updateAttackZone();
     this.syncProjectileHurtZone();
@@ -113,6 +120,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   markAttackHit(target: object): void {
     this.hitTargets.add(target);
+    this.attackHitJumpCancelMs = combatConfig.combo.hitConfirmJumpCancelMs;
   }
 
   currentAttackPayload(): DamagePayload | undefined {
@@ -183,6 +191,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   private updateAttackState(deltaMs: number, input: InputSnapshot): void {
     this.attackBufferMs = Math.max(0, this.attackBufferMs - deltaMs);
+    this.attackHitJumpCancelMs = Math.max(0, this.attackHitJumpCancelMs - deltaMs);
     this.comboTimerMs = Math.max(0, this.comboTimerMs - deltaMs);
 
     if (input.attackPressed && !this.movement.state.dead) {
@@ -192,7 +201,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     if (this.attackStage !== 0) {
       this.attackElapsedMs += deltaMs;
-      if ((input.dashPressed || input.jumpPressed) && this.canCancelCurrentAttack()) {
+      const jumpCancelRequested = input.jumpPressed || (input.jumpDown && this.attackHitJumpCancelMs > 0);
+      if (jumpCancelRequested && this.canJumpCancelCurrentAttack()) {
+        this.forceJumpPressedThisFrame = true;
+        this.endAttack(true);
+      } else if (input.dashPressed && this.canCancelCurrentAttack()) {
         this.endAttack(true);
       } else {
         const config = this.currentAttackConfig();
@@ -216,10 +229,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.lastAttackStage = stage;
     this.attackElapsedMs = 0;
     this.attackBufferMs = 0;
+    this.attackHitJumpCancelMs = 0;
     this.attackQueued = false;
     this.comboTimerMs = combatConfig.combo.resetMs;
     this.audio.blip('blocked');
-    this.applyAttackLunge(config);
+    this.queueAttackLunge(config);
     const arcColor = config.isFinisher ? COLORS.amber : COLORS.cyan;
     const arc = this.scene.add.ellipse(this.x + this.movement.state.facing * config.offsetX, this.y + config.offsetY - 6, config.width, config.height, arcColor, config.isFinisher ? 0.36 : 0.26);
     arc.setDepth(DEPTHS.effects);
@@ -241,8 +255,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   private syncProjectileHurtZone(): void {
     const body = this.projectileHurtZone.body as Phaser.Physics.Arcade.Body;
-    this.projectileHurtZone.setPosition(this.x, this.y - 8);
-    body.setSize(86, 172, true);
+    this.projectileHurtZone.setPosition(this.x, this.y + playerSpriteConfig.projectileHurtZone.offsetY);
+    body.setSize(playerSpriteConfig.projectileHurtZone.width, playerSpriteConfig.projectileHurtZone.height, true);
     body.enable = !this.movement.state.dead;
     body.updateFromGameObject();
   }
@@ -323,6 +337,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return Boolean(config && config.stage < 3 && this.attackElapsedMs >= config.cancelAfterMs);
   }
 
+  private canJumpCancelCurrentAttack(): boolean {
+    const config = this.currentAttackConfig();
+    return Boolean(config && (this.attackElapsedMs >= config.cancelAfterMs || this.attackHitJumpCancelMs > 0));
+  }
+
   private shouldSuppressBurstMovement(): boolean {
     const config = this.currentAttackConfig();
     return Boolean(config && this.attackElapsedMs < config.cancelAfterMs);
@@ -332,6 +351,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const endedStage = this.attackStage;
     this.attackStage = 0;
     this.attackElapsedMs = 0;
+    this.attackHitJumpCancelMs = 0;
     this.attackQueued = false;
     if (endedStage === 3) {
       this.lastAttackStage = 0;
@@ -348,10 +368,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return 1;
   }
 
-  private applyAttackLunge(config: AttackStageConfig): void {
+  private queueAttackLunge(config: AttackStageConfig): void {
+    this.pendingAttackLungeX += config.lungeX * this.movement.state.facing;
+  }
+
+  private applyPendingAttackLunge(): void {
+    if (this.pendingAttackLungeX === 0) return;
     const body = this.body as Phaser.Physics.Arcade.Body;
-    const nextVelocity = Phaser.Math.Clamp(body.velocity.x + config.lungeX * this.movement.state.facing, -430, 430);
+    const nextVelocity = Phaser.Math.Clamp(body.velocity.x + this.pendingAttackLungeX, -470, 470);
     body.setVelocityX(nextVelocity);
+    this.pendingAttackLungeX = 0;
   }
 
   private expireRecentDamageIds(): void {

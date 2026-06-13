@@ -3,6 +3,7 @@ import path from 'node:path';
 import { enemyMovementConfig } from '../src/data/enemyMovementConfig';
 import { levelOne } from '../src/data/levelOne';
 import { movementFeelConfig } from '../src/data/movementFeelConfig';
+import { playerSpriteConfig } from '../src/data/playerSpriteConfig';
 import { EVENTS } from '../src/game/constants';
 
 const root = process.cwd();
@@ -23,12 +24,19 @@ assert(movement.groundSnapVelocity > 0 && movement.groundSnapVelocity < movement
 assert(movement.dashAirUses === 1, 'Hero should have exactly one air dash in this movement pass.');
 assert(movement.dashCooldownMs >= movement.dashDurationMs, 'Dash cooldown must cover dash duration.');
 assert(movement.dashBufferMs > 0 && movement.dashBufferMs <= 140, 'Dash buffer must be short and positive.');
+assert(playerSpriteConfig.scale === 0.346, 'Hero visual and physics scale must stay at the requested +8% size.');
+assert(playerSpriteConfig.body.width === 104 && playerSpriteConfig.body.height === 242, 'Hero body must grow with the +8% visual scale.');
+assert(playerSpriteConfig.body.offsetX === 88 && playerSpriteConfig.body.offsetY === 26, 'Hero body offset must keep feet aligned after scaling.');
+assert(playerSpriteConfig.projectileHurtZone.width === 93 && playerSpriteConfig.projectileHurtZone.height === 186, 'Hero projectile hurt zone must grow with the +8% scale.');
+assert(movement.jumpVelocity <= -790, 'Hero jump should be retuned upward for the larger sprite.');
+assert((movement.dashSpeed * movement.dashDurationMs) / 1000 >= 121, 'Hero dash range should grow with the larger sprite.');
+assert(movement.dashEndSpeed >= 405, 'Hero dash exit speed should preserve momentum after the longer dash.');
 assert(movement.wallJumpVelocityX > movement.maxRunSpeed, 'Wall jump must push the hero away from the wall.');
-assert(movement.wallJumpVelocityY < -500, 'Wall jump must have clear upward force.');
+assert(movement.wallJumpVelocityY <= -760, 'Wall jump must be retuned upward for the larger sprite.');
 assert(movement.variableJumpCutMultiplier > 0.25 && movement.variableJumpCutMultiplier < 0.7, 'Variable jump cut must preserve short-hop control.');
 assert(movement.maxFallSpeed > movement.maxRunSpeed, 'Fall speed should exceed run speed for readable gravity.');
 
-const groundTypes = ['trooper', 'mech'] as const;
+const groundTypes = ['trooper', 'mech', 'scout'] as const;
 for (const type of groundTypes) {
   const config = enemyMovementConfig[type];
   assert(config.patrolSpeed > 0, `${type} must define patrol speed.`);
@@ -38,6 +46,12 @@ for (const type of groundTypes) {
   assert(config.edgeProbeX > 0 && config.edgeProbeY > 0, `${type} must define edge probes.`);
   assert(config.attackStopDistance > config.closeRetreatDistance, `${type} attack distance must exceed retreat distance.`);
 }
+
+const sentinel = enemyMovementConfig.sentinel;
+assert(sentinel.patrolSpeed > 0 && sentinel.chaseSpeed >= sentinel.patrolSpeed, 'Sentinel must define bounded anchor movement speeds.');
+assert(sentinel.acceleration > 0 && sentinel.deceleration > 0, 'Sentinel must define acceleration and deceleration.');
+assert(sentinel.leashDistance > 200, 'Sentinel leash must keep it readable and bounded.');
+assert(sentinel.attackStopDistance > 300, 'Sentinel attack distance must support telegraphed ranged attacks.');
 
 const drone = enemyMovementConfig.drone;
 assert(drone.maxSpeed > 0 && drone.maxSpeed < movement.maxRunSpeed, 'Drone max speed must be bounded below hero run speed.');
@@ -63,11 +77,16 @@ assert(movementSource.includes('playerDashEnded'), 'MovementController must emit
 assert(movementSource.includes('cornerCorrecting'), 'MovementController must expose corner correction state.');
 assert(!movementSource.includes('airDashAvailable'), 'MovementController should use counted air dash state, not a boolean airDashAvailable flag.');
 
+const playerSource = await fs.readFile(path.join(root, 'src/entities/Player.ts'), 'utf8');
+assert(playerSource.includes('playerSpriteConfig.scale'), 'Player must apply visual scale from playerSpriteConfig.');
+assert(playerSource.includes('playerSpriteConfig.body'), 'Player must apply body sizing from playerSpriteConfig.');
+assert(playerSource.includes('playerSpriteConfig.projectileHurtZone'), 'Player must apply projectile hurt zone sizing from playerSpriteConfig.');
+
 const enemyBaseSource = await fs.readFile(path.join(root, 'src/entities/EnemyBase.ts'), 'utf8');
 assert(enemyBaseSource.includes('enemyStateChanged'), 'EnemyBase must emit movement state changes.');
 assert(!enemyBaseSource.includes('this.x = Phaser.Math.Clamp'), 'Enemy damage must not teleport enemies through x clamping.');
 
-for (const relativePath of ['src/entities/TrooperEnemy.ts', 'src/entities/DroneEnemy.ts', 'src/entities/MechEnemy.ts']) {
+for (const relativePath of ['src/entities/TrooperEnemy.ts', 'src/entities/DroneEnemy.ts', 'src/entities/MechEnemy.ts', 'src/entities/ScoutEnemy.ts', 'src/entities/SentinelEnemy.ts']) {
   const source = await fs.readFile(path.join(root, relativePath), 'utf8');
   assert(source.includes('enemyMovementConfig'), `${relativePath} must use enemyMovementConfig.`);
 }

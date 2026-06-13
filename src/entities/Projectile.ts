@@ -41,6 +41,25 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     body.setVelocity(velocityX, velocityY);
   }
 
+  deflect(velocityX: number, velocityY: number, tint = COLORS.cyan, damage = 1): void {
+    this.fromPlayer = true;
+    this.damage = damage;
+    this.hitId = `player-deflect-${Projectile.nextHitId}`;
+    Projectile.nextHitId += 1;
+    this.impactConsumed = false;
+    this.lifespanMs = 1600;
+    this.setTint(tint);
+    this.setAlpha(1);
+    this.setScale(1.08);
+    this.setActive(true);
+    this.setVisible(true);
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false);
+    body.enable = true;
+    body.setCircle(6, 2, 2);
+    body.setVelocity(velocityX, velocityY);
+  }
+
   consumeImpact(): boolean {
     if (this.impactConsumed) return false;
     this.impactConsumed = true;

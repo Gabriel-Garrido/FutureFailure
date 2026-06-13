@@ -1,6 +1,7 @@
 export type DamageSource =
   | 'playerMelee'
   | 'playerProjectile'
+  | 'deflectedProjectile'
   | 'enemyContact'
   | 'enemyProjectile'
   | 'fall'
@@ -73,6 +74,7 @@ export const combatConfig = {
   combo: {
     inputBufferMs: 150,
     resetMs: 520,
+    hitConfirmJumpCancelMs: 180,
     stages: [
       {
         stage: 1,
@@ -165,6 +167,14 @@ export const combatConfig = {
         flashMs: 250,
       },
     },
+    deflect: {
+      amount: 1,
+      speed: 560,
+      knockback: { enabled: true, x: 230, y: -76 },
+      stunMs: 130,
+      hitstop: { durationMs: 26, timeScale: 0.34 },
+      defeatHitstop: { durationMs: 44, timeScale: 0.22 },
+    },
   },
   playerDamage: {
     contact: {
@@ -210,6 +220,7 @@ export const combatConfig = {
     enemyProjectilesUseGlobalHitstop: false,
     enemyProjectileDamageIsIdempotent: true,
     enemyProjectileDamagePreservesPlayerPosition: true,
+    enemyProjectilesCanBeDeflected: true,
     playerInvulnerabilityBlocksContactRepeat: true,
     hitstopAlwaysResetsToOne: true,
   },

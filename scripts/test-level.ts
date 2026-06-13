@@ -91,7 +91,11 @@ for (const destructible of levelOne.destructibles) {
 }
 
 assert(levelOne.metadata.name.includes('Future Failure'), 'Level metadata must use the Future Failure name.');
-assert(levelOne.width >= 5200, 'Level one should have enough horizontal room for tutorial, reactor and arena.');
+assert(
+  levelOne.width >= levelDesignConfig.traversal.minLevelOneWidth
+    && levelOne.width <= levelDesignConfig.traversal.maxLevelOneWidth,
+  `Level one width should stay between ${levelDesignConfig.traversal.minLevelOneWidth} and ${levelDesignConfig.traversal.maxLevelOneWidth}px.`,
+);
 assert(levelOne.finalPortal.x > levelOne.width - 220, 'Exit portal must be clearly placed at the right edge.');
 const levelBackground = assetManifest.find((entry) => entry.key === levelOne.backgroundKey);
 assert(Boolean(levelBackground), 'Level one must reference an existing background asset.');
@@ -113,6 +117,7 @@ const levelBuilderSource = fs.readFileSync(path.join(process.cwd(), 'src/systems
 const levelSceneSource = fs.readFileSync(path.join(process.cwd(), 'src/scenes/LevelOneScene.ts'), 'utf8');
 const levelOneSource = fs.readFileSync(path.join(process.cwd(), 'src/data/levelOne.ts'), 'utf8');
 const levelTypesSource = fs.readFileSync(path.join(process.cwd(), 'src/data/levelTypes.ts'), 'utf8');
+const touchControlsSource = fs.readFileSync(path.join(process.cwd(), 'src/ui/TouchControls.ts'), 'utf8');
 assert(!levelBuilderSource.includes('portal-idle'), 'Final portal must not use the invalid doors 30..35 frame animation.');
 assert(!levelSceneSource.includes('collider(this.player, this.level.finalPortal'), 'Final portal must not be connected as a solid collider.');
 assert(levelSceneSource.includes('overlap(this.player, this.level.finalPortal'), 'Final portal should remain an overlap-only exit zone.');
@@ -174,6 +179,11 @@ for (const destructible of levelOne.destructibles) {
 }
 const destructibleDrops = levelOne.destructibles.flatMap((destructible) => destructible.drop ? [destructible.drop] : []);
 const emptyBreakables = levelOne.destructibles.filter((destructible) => !destructible.drop);
+const healthBreakables = destructibleDrops.filter((drop) => drop.type === 'healthSmall' || drop.type === 'healthLarge');
+const energyBreakables = destructibleDrops.filter((drop) => drop.type === 'energyCell');
+assert(levelOne.destructibles.length >= levelDesignConfig.resources.minBreakables, `LevelOne must include at least ${levelDesignConfig.resources.minBreakables} breakable boxes.`);
+assert(healthBreakables.length >= levelDesignConfig.resources.minHealthBreakables, `LevelOne must include at least ${levelDesignConfig.resources.minHealthBreakables} health boxes.`);
+assert(energyBreakables.length >= levelDesignConfig.resources.minEnergyBreakables, `LevelOne must include at least ${levelDesignConfig.resources.minEnergyBreakables} energy boxes.`);
 assert(destructibleDrops.some((drop) => drop.type === 'healthSmall' || drop.type === 'healthLarge'), 'LevelOne must place health rewards inside breakable boxes.');
 assert(destructibleDrops.some((drop) => drop.type === 'energyCell'), 'LevelOne must place energy rewards inside breakable boxes.');
 assert(destructibleDrops.every((drop) => !['upgradeChip', 'dataShard'].includes(String(drop.type))), 'Energy rewards must use only the canonical energyCell pickup.');
@@ -194,7 +204,7 @@ assert(levelSceneSource.includes('spawnEnemyDrop'), 'LevelOneScene must spawn dr
 assert(levelSceneSource.includes('revealFromBreakable(targetY, dropConfig.revealDurationMs'), 'Drops must use the shared 0.5s reveal duration.');
 
 const movementTrigger = byId(levelOne.triggers, 'trigger-movement-complete');
-assert(movementTrigger.x >= 620 && movementTrigger.x <= 820, 'Movement objective trigger should remain at the end of the first movement lesson.');
+assert(movementTrigger.x >= 780 && movementTrigger.x <= 920, 'Movement objective trigger should remain at the end of the first movement lesson.');
 
 const firstTrooper = byId(levelOne.enemies, 'enemy-security-trooper');
 assert(firstTrooper.x > movementTrigger.x, 'First combat target should remain after the movement lesson.');
@@ -360,9 +370,21 @@ for (let i = 0; i < breakableBoxes.length; i += 1) {
 const arenaZone = byId(levelOne.zones, 'zone-arena');
 assert(arenaZone.width >= levelDesignConfig.traversal.minArenaWidth, 'Final arena must provide enough width for readable enemy states.');
 const sortedArenaEnemies = levelOne.enemies.filter((enemy) => enemy.zone === 'arena').sort((a, b) => a.x - b.x);
+assert(sortedArenaEnemies.length <= levelDesignConfig.traversal.maxArenaEnemies, `Arena should not exceed ${levelDesignConfig.traversal.maxArenaEnemies} enemies.`);
 for (let i = 1; i < sortedArenaEnemies.length; i += 1) {
   assert(sortedArenaEnemies[i].x - sortedArenaEnemies[i - 1].x >= levelDesignConfig.traversal.minArenaEnemySpacing, 'Arena enemies need enough horizontal spacing.');
 }
+
+const nonArenaEnemies = levelOne.enemies.filter((enemy) => enemy.zone !== 'arena').sort((a, b) => a.x - b.x);
+for (let i = 0; i < nonArenaEnemies.length; i += 1) {
+  const cluster = nonArenaEnemies.filter((enemy) => enemy.x >= nonArenaEnemies[i].x && enemy.x <= nonArenaEnemies[i].x + levelDesignConfig.traversal.enemyClusterWindow);
+  assert(cluster.length <= levelDesignConfig.traversal.maxEnemiesPerClusterWindow, `Enemy cluster near x=${nonArenaEnemies[i].x} has ${cluster.length} enemies.`);
+}
+
+const highOneWayPlatforms = levelOne.platforms.filter((platformData) => platformData.collision === 'oneWay' && platformData.y < 760);
+assert(highOneWayPlatforms.length >= levelDesignConfig.traversal.minHighOneWayPlatforms, `LevelOne should include at least ${levelDesignConfig.traversal.minHighOneWayPlatforms} high one-way platforms.`);
+assert(touchControlsSource.includes('GAME_HEIGHT - 218'), 'Touch toggle should sit away from the minimap area.');
+assert(!touchControlsSource.includes('GAME_WIDTH - 82, 118'), 'Touch toggle must not overlap the minimap at the old top-right position.');
 
 if (failures.length > 0) {
   for (const failure of failures) console.error(`[level:test] ${failure}`);

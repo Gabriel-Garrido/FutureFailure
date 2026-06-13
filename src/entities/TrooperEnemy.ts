@@ -1,6 +1,7 @@
 import { enemyConfig } from '../data/enemyConfig';
 import { enemyMovementConfig } from '../data/enemyMovementConfig';
-import { COLORS } from '../game/constants';
+import { type EnemySpriteProfile } from '../data/enemySpriteConfig';
+import { COLORS, DEPTHS } from '../game/constants';
 import { type Player } from './Player';
 import { EnemyBase } from './EnemyBase';
 
@@ -8,8 +9,8 @@ export class TrooperEnemy extends EnemyBase {
   private shootCooldownMs = Phaser.Math.Between(300, 900);
   private windupMs = 0;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame: number, patrolMin: number, patrolMax: number) {
-    super(scene, x, y, texture, frame, enemyConfig.trooper.health, patrolMin, patrolMax, 'trooper');
+  constructor(scene: Phaser.Scene, x: number, y: number, profile: EnemySpriteProfile, patrolMin: number, patrolMax: number) {
+    super(scene, x, y, profile, enemyConfig.trooper.health, patrolMin, patrolMax, 'trooper');
   }
 
   updateEnemy(deltaMs: number, player: Player, projectiles: Phaser.Physics.Arcade.Group): void {
@@ -46,11 +47,12 @@ export class TrooperEnemy extends EnemyBase {
 
     if (this.windupMs > 0) {
       this.setMovementState('attackWindup', 'shoot');
+      this.facePlayer(player);
       this.brakeX(moveConfig.deceleration, deltaMs);
       this.windupMs -= deltaMs;
       if (this.windupMs <= 0) {
         this.clearTint();
-        this.shoot(projectiles, this.x + this.direction * 32, this.y - 20, 310, COLORS.red, enemyConfig.trooper.damage);
+        this.shootAt(projectiles, this.x + this.direction * 32, this.y - 20, player.x, player.y - 24, 310, COLORS.red, enemyConfig.trooper.damage);
         this.shootCooldownMs = enemyConfig.trooper.shootCooldownMs;
       }
       return;
@@ -60,7 +62,9 @@ export class TrooperEnemy extends EnemyBase {
       const retreatDir: 1 | -1 = distanceX >= 0 ? -1 : 1;
       const blockedByPatrol = (retreatDir < 0 && this.x <= this.patrolMin + 22) || (retreatDir > 0 && this.x >= this.patrolMax - 22);
       this.setMovementState('chase', 'retreat');
-      if (blockedByPatrol) this.brakeX(moveConfig.deceleration, deltaMs);
+      this.direction = retreatDir;
+      this.setFlipX(this.direction < 0);
+      if (blockedByPatrol || !this.hasGroundAhead(retreatDir, moveConfig.edgeProbeX, moveConfig.edgeProbeY)) this.brakeX(moveConfig.deceleration, deltaMs);
       else this.moveTowardVelocityX(moveConfig.chaseSpeed * retreatDir, moveConfig.acceleration, deltaMs);
       return;
     }
@@ -78,6 +82,20 @@ export class TrooperEnemy extends EnemyBase {
       this.setMovementState('attackWindup', 'shoot');
       this.setTint(COLORS.amber);
       this.telegraph(COLORS.amber, 42, enemyConfig.trooper.windupMs);
+      this.createAimLine(player);
     }
+  }
+
+  private createAimLine(player: Player): void {
+    const line = this.scene.add.line(0, 0, this.x + this.direction * 32, this.y - 20, player.x, player.y - 24, COLORS.amber, 0.28)
+      .setOrigin(0, 0)
+      .setDepth(DEPTHS.effects);
+    this.scene.tweens.add({
+      targets: line,
+      alpha: 0,
+      duration: enemyConfig.trooper.windupMs,
+      ease: 'Cubic.easeOut',
+      onComplete: () => line.destroy(),
+    });
   }
 }

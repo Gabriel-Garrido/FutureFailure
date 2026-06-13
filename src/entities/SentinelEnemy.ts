@@ -1,5 +1,7 @@
 import { enemyConfig } from '../data/enemyConfig';
-import { COLORS } from '../game/constants';
+import { enemyMovementConfig } from '../data/enemyMovementConfig';
+import { type EnemySpriteProfile } from '../data/enemySpriteConfig';
+import { COLORS, DEPTHS } from '../game/constants';
 import { EnemyBase } from './EnemyBase';
 import { type Player } from './Player';
 
@@ -12,18 +14,14 @@ export class SentinelEnemy extends EnemyBase {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    texture: string,
-    frame: number,
+    profile: EnemySpriteProfile,
     patrolMin: number,
     patrolMax: number,
   ) {
-    super(scene, x, y, texture, frame, enemyConfig.sentinel.health, patrolMin, patrolMax, 'sentinel');
+    super(scene, x, y, profile, enemyConfig.sentinel.health, patrolMin, patrolMax, 'sentinel');
     this.knockbackMultiplier = 0.28;
-    this.setScale(0.36);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
-    body.setSize(118, 96);
-    body.setOffset(46, 58);
     body.setMaxVelocity(180, 180);
   }
 
@@ -38,7 +36,7 @@ export class SentinelEnemy extends EnemyBase {
       this.anchorToHome(deltaMs);
       return;
     }
-    if (this.tickRecover(deltaMs, 1400)) {
+    if (this.tickRecover(deltaMs, enemyMovementConfig.sentinel.deceleration)) {
       this.windupMs = 0;
       this.anchorToHome(deltaMs);
       return;
@@ -72,6 +70,7 @@ export class SentinelEnemy extends EnemyBase {
       this.setMovementState('attackWindup', 'aim');
       this.setTint(COLORS.red);
       this.telegraph(COLORS.red, 54, cfg.windupMs);
+      this.createSpreadTelegraph(player);
     } else {
       this.setMovementState('patrol', 'track');
     }
@@ -79,14 +78,35 @@ export class SentinelEnemy extends EnemyBase {
 
   private anchorToHome(deltaMs: number): void {
     const cfg = enemyConfig.sentinel;
+    const moveCfg = enemyMovementConfig.sentinel;
     const targetY = this.homeY + Math.sin(this.ageMs / cfg.bobMs) * cfg.bobAmplitude;
     this.moveTowardVelocity(
       Phaser.Math.Clamp((this.homeX - this.x) * 2.2, -60, 60),
       Phaser.Math.Clamp((targetY - this.y) * 2.5, -38, 38),
-      1350,
+      moveCfg.acceleration,
       deltaMs,
-      44,
+      moveCfg.chaseSpeed,
     );
+  }
+
+  private createSpreadTelegraph(player: Player): void {
+    const cfg = enemyConfig.sentinel;
+    const muzzleX = this.x + this.direction * 28;
+    const muzzleY = this.y;
+    const aimAngle = Phaser.Math.Angle.Between(muzzleX, muzzleY, player.x, player.y - 18);
+    const spread = Phaser.Math.DegToRad(cfg.spreadAngleDeg);
+    for (const angle of [aimAngle - spread, aimAngle, aimAngle + spread]) {
+      const line = this.scene.add.line(0, 0, muzzleX, muzzleY, muzzleX + Math.cos(angle) * 150, muzzleY + Math.sin(angle) * 150, COLORS.red, 0.22)
+        .setOrigin(0, 0)
+        .setDepth(DEPTHS.effects);
+      this.scene.tweens.add({
+        targets: line,
+        alpha: 0,
+        duration: cfg.windupMs,
+        ease: 'Cubic.easeOut',
+        onComplete: () => line.destroy(),
+      });
+    }
   }
 
   private fireSpread(projectiles: Phaser.Physics.Arcade.Group, player: Player): void {

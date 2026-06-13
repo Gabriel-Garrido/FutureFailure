@@ -35,46 +35,46 @@ export const dropConfig = {
   enemyRiseY: 42,
   enemies: {
     trooper: {
-      dropChance: 0.55,
+      dropChance: 0.62,
       table: [
-        { type: 'energyCell', weight: 50 },
-        { type: 'healthSmall', weight: 30 },
-        { type: 'healthLarge', weight: 8 },
+        { type: 'energyCell', weight: 45 },
+        { type: 'healthSmall', weight: 36 },
+        { type: 'healthLarge', weight: 14 },
       ],
     },
     drone: {
-      dropChance: 0.5,
+      dropChance: 0.58,
       table: [
-        { type: 'energyCell', weight: 55 },
-        { type: 'healthSmall', weight: 28 },
-        { type: 'healthLarge', weight: 6 },
+        { type: 'energyCell', weight: 48 },
+        { type: 'healthSmall', weight: 34 },
+        { type: 'healthLarge', weight: 12 },
       ],
     },
     mech: {
       // Heavy elite: always rewards the player for the longer fight.
       dropChance: 1,
       table: [
-        { type: 'energyCell', weight: 44 },
-        { type: 'healthLarge', weight: 20 },
-        { type: 'healthSmall', weight: 16 },
+        { type: 'energyCell', weight: 42 },
+        { type: 'healthLarge', weight: 26 },
+        { type: 'healthSmall', weight: 22 },
       ],
     },
     scout: {
-      // Lightweight and fast — lower drop chance, mostly energy.
-      dropChance: 0.42,
+      // Lightweight and fast: modest drop chance, but still helps recovery.
+      dropChance: 0.5,
       table: [
-        { type: 'energyCell', weight: 58 },
-        { type: 'healthSmall', weight: 28 },
-        { type: 'healthLarge', weight: 8 },
+        { type: 'energyCell', weight: 46 },
+        { type: 'healthSmall', weight: 34 },
+        { type: 'healthLarge', weight: 12 },
       ],
     },
     sentinel: {
       // Stationary turret — rewards patient players who destroy it.
-      dropChance: 0.65,
+      dropChance: 0.72,
       table: [
-        { type: 'energyCell', weight: 48 },
-        { type: 'healthSmall', weight: 30 },
-        { type: 'healthLarge', weight: 16 },
+        { type: 'energyCell', weight: 44 },
+        { type: 'healthSmall', weight: 34 },
+        { type: 'healthLarge', weight: 22 },
       ],
     },
   } satisfies Record<EnemyDropKind, EnemyDropProfile>,

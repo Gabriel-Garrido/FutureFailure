@@ -145,7 +145,7 @@ export class LevelOneScene extends Phaser.Scene {
       this.cameraSystem?.shake('hit');
       this.audioSystem?.blip('finisher');
       this.spawnEnemyDrop(kind, x, y);
-      if (x > 2440 && x < 2940 && !this.completedObjectives.has('combat')) {
+      if (x > 2850 && x < 3900 && !this.completedObjectives.has('combat')) {
         this.completedObjectives.add('combat');
         this.emitObjective(gameText.objectives.combatComplete, 2600);
       }
@@ -217,18 +217,20 @@ export class LevelOneScene extends Phaser.Scene {
     if (!this.player) return;
     if (this.objectiveLockMs > 0) return;
     const x = this.player.x;
-    if (x > 700 && !this.completedObjectives.has('movement')) {
+    if (x > 900 && !this.completedObjectives.has('movement')) {
       this.completeMovementObjective();
       return;
     }
     let next = '';
-    if (this.player.hasKeycard && x < 4440) next = gameText.guidance.returnWithKey;
-    else if (x < 720) next = gameText.guidance.start;
-    else if (x < 1540) next = gameText.guidance.climb;
-    else if (x < 2390) next = gameText.guidance.wallJump;
-    else if (x < 3230) next = gameText.guidance.hub;
-    else if (x < 4440) next = gameText.guidance.reactor;
-    else if (x < 5450) next = this.finalOpen ? gameText.guidance.exit : gameText.guidance.arena;
+    if (this.player.hasKeycard && x < 6100) next = gameText.guidance.returnWithKey;
+    else if (x < 900) next = gameText.guidance.start;
+    else if (x < 1850) next = gameText.guidance.climb;
+    else if (x < 2850) next = gameText.guidance.wallJump;
+    else if (x < 3900) next = gameText.guidance.hub;
+    else if (x < 5000) next = gameText.guidance.reactor;
+    else if (x < 6100) next = gameText.guidance.maintenance;
+    else if (x < 7200) next = gameText.guidance.gauntlet;
+    else if (x < levelOne.finalPortal.x) next = this.finalOpen ? gameText.guidance.exit : gameText.guidance.arena;
     else next = gameText.guidance.exit;
 
     this.emitObjective(next);
@@ -385,10 +387,10 @@ export class LevelOneScene extends Phaser.Scene {
   }
 
   private restoreProgressFromSave(): void {
-    if (this.saveState.hasKeycard || this.saveState.x >= 720) {
+    if (this.saveState.hasKeycard || this.saveState.x >= 900) {
       this.completedObjectives.add('movement');
     }
-    if (this.saveState.hasKeycard || this.saveState.x >= 3290) {
+    if (this.saveState.hasKeycard || this.saveState.x >= 3900) {
       this.completedObjectives.add('combat');
     }
   }

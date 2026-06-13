@@ -1,6 +1,7 @@
 import { enemyConfig } from '../data/enemyConfig';
 import { enemyMovementConfig } from '../data/enemyMovementConfig';
-import { COLORS } from '../game/constants';
+import { type EnemySpriteProfile } from '../data/enemySpriteConfig';
+import { COLORS, DEPTHS } from '../game/constants';
 import { EnemyBase } from './EnemyBase';
 import { type Player } from './Player';
 
@@ -13,17 +14,13 @@ export class ScoutEnemy extends EnemyBase {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    texture: string,
-    frame: number,
+    profile: EnemySpriteProfile,
     patrolMin: number,
     patrolMax: number,
   ) {
-    super(scene, x, y, texture, frame, enemyConfig.scout.health, patrolMin, patrolMax, 'scout');
+    super(scene, x, y, profile, enemyConfig.scout.health, patrolMin, patrolMax, 'scout');
     this.knockbackMultiplier = 1.3;
-    this.setScale(0.29);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(84, 130);
-    body.setOffset(63, 55);
     body.setMaxVelocity(450, 680);
   }
 
@@ -47,6 +44,12 @@ export class ScoutEnemy extends EnemyBase {
       this.chargeTimeMs -= deltaMs;
       const body = this.body as Phaser.Physics.Arcade.Body;
       body.setVelocityX(enemyConfig.scout.chargeSpeed * this.direction);
+      if (!this.hasGroundAhead(this.direction, 58, cfg.edgeProbeY) || this.x <= this.patrolMin + 16 || this.x >= this.patrolMax - 16) {
+        this.chargeCooldownMs = enemyConfig.scout.chargeCooldownMs;
+        this.chargeTimeMs = 0;
+        this.recoverMs = Math.max(this.recoverMs, 340);
+        return;
+      }
       if (Math.abs(player.x - this.x) < enemyConfig.scout.attackRange) {
         this.shootAt(
           projectiles,
@@ -98,10 +101,11 @@ export class ScoutEnemy extends EnemyBase {
     this.facePlayer(player);
 
     // ── Initiate charge when close enough ────────────────────────────
-    if (distX < enemyConfig.scout.chargeInitRange && this.chargeCooldownMs <= 0) {
+    if (distX < enemyConfig.scout.chargeInitRange && this.chargeCooldownMs <= 0 && this.canChargeSafely(dx >= 0 ? 1 : -1, distX)) {
       this.chargeWindupMs = enemyConfig.scout.chargeWindupMs;
       this.setTint(COLORS.amber);
       this.telegraph(COLORS.amber, 40, enemyConfig.scout.chargeWindupMs);
+      this.createChargeTell(dx >= 0 ? 1 : -1);
       this.setMovementState('attackWindup', 'charge');
       return;
     }
@@ -120,5 +124,26 @@ export class ScoutEnemy extends EnemyBase {
     if (this.chargeWindupMs > 0 || this.chargeTimeMs > 0) this.clearTint();
     this.chargeWindupMs = 0;
     this.chargeTimeMs = 0;
+  }
+
+  private canChargeSafely(direction: 1 | -1, distanceX: number): boolean {
+    if (distanceX < 82) return false;
+    const targetX = this.x + direction * 150;
+    if (targetX < this.patrolMin + 22 || targetX > this.patrolMax - 22) return false;
+    return this.hasGroundAhead(direction, 68, enemyMovementConfig.scout.edgeProbeY);
+  }
+
+  private createChargeTell(direction: 1 | -1): void {
+    const line = this.scene.add.rectangle(this.x + direction * 64, this.y - 18, 120, 4, COLORS.amber, 0.36)
+      .setDepth(DEPTHS.effects)
+      .setRotation(direction < 0 ? Math.PI : 0);
+    this.scene.tweens.add({
+      targets: line,
+      alpha: 0,
+      scaleX: 1.2,
+      duration: enemyConfig.scout.chargeWindupMs,
+      ease: 'Cubic.easeOut',
+      onComplete: () => line.destroy(),
+    });
   }
 }

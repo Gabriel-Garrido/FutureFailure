@@ -1,5 +1,6 @@
 import { enemyConfig } from '../data/enemyConfig';
 import { enemyMovementConfig } from '../data/enemyMovementConfig';
+import { type EnemySpriteProfile } from '../data/enemySpriteConfig';
 import { COLORS, DEPTHS } from '../game/constants';
 import { EnemyBase } from './EnemyBase';
 import { type Player } from './Player';
@@ -13,15 +14,11 @@ export class MechEnemy extends EnemyBase {
   private intent: MechIntent = 'patrol';
   private readonly glow: Phaser.GameObjects.Ellipse;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame: number, patrolMin: number, patrolMax: number) {
-    super(scene, x, y, texture, frame, enemyConfig.mech.health, patrolMin, patrolMax, 'mech');
+  constructor(scene: Phaser.Scene, x: number, y: number, profile: EnemySpriteProfile, patrolMin: number, patrolMax: number) {
+    super(scene, x, y, profile, enemyConfig.mech.health, patrolMin, patrolMax, 'mech');
     this.knockbackMultiplier = 0.34;
-    this.setScale(0.5);
-    this.setOrigin(0.5, 0.62);
 
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(104, 148);
-    body.setOffset(52, 44);
     body.setMaxVelocity(150, 680);
 
     this.glow = scene.add.ellipse(this.x, this.y + 34, 96, 22, COLORS.red, 0.08)

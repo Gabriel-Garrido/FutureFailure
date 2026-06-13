@@ -1,5 +1,6 @@
 import { enemyConfig } from '../data/enemyConfig';
 import { enemyMovementConfig } from '../data/enemyMovementConfig';
+import { type EnemySpriteProfile } from '../data/enemySpriteConfig';
 import { COLORS } from '../game/constants';
 import { EnemyBase } from './EnemyBase';
 import { type Player } from './Player';
@@ -8,14 +9,14 @@ export class DroneEnemy extends EnemyBase {
   private shootCooldownMs = Phaser.Math.Between(700, 1300);
   private windupMs = 0;
   private ageMs = 0;
+  private orbitSide: 1 | -1 = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
+  private damagedPauseMs = 0;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame: number, patrolMin: number, patrolMax: number) {
-    super(scene, x, y, texture, frame, enemyConfig.drone.health, patrolMin, patrolMax, 'drone');
+  constructor(scene: Phaser.Scene, x: number, y: number, profile: EnemySpriteProfile, patrolMin: number, patrolMax: number) {
+    super(scene, x, y, profile, enemyConfig.drone.health, patrolMin, patrolMax, 'drone');
     this.knockbackMultiplier = 1.15;
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
-    body.setSize(110, 90);
-    body.setOffset(48, 60);
   }
 
   updateEnemy(deltaMs: number, player: Player, projectiles: Phaser.Physics.Arcade.Group): void {
@@ -23,6 +24,8 @@ export class DroneEnemy extends EnemyBase {
     const moveConfig = enemyMovementConfig.drone;
     if (this.tickDamageState(deltaMs)) {
       this.windupMs = 0;
+      this.damagedPauseMs = Math.max(this.damagedPauseMs, 140);
+      this.holdAltitude(deltaMs);
       return;
     }
     if (this.tickRecover(deltaMs, moveConfig.deceleration)) {
@@ -31,6 +34,7 @@ export class DroneEnemy extends EnemyBase {
     }
 
     this.ageMs += deltaMs;
+    this.damagedPauseMs = Math.max(0, this.damagedPauseMs - deltaMs);
     const distance = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
     const canSee = distance < enemyConfig.drone.detectRange && Math.abs(player.x - this.homeX) < moveConfig.leashDistance;
     this.shootCooldownMs = Math.max(0, this.shootCooldownMs - deltaMs);
@@ -51,6 +55,10 @@ export class DroneEnemy extends EnemyBase {
 
     if (canSee) {
       this.facePlayer(player);
+      if (this.damagedPauseMs > 0) {
+        this.holdAltitude(deltaMs);
+        return;
+      }
       this.steerAroundPlayer(player, deltaMs);
       if (distance < moveConfig.attackStopDistance && this.shootCooldownMs <= 0) {
         this.windupMs = 190;
@@ -71,8 +79,12 @@ export class DroneEnemy extends EnemyBase {
 
   private steerAroundPlayer(player: Player, deltaMs: number): void {
     const moveConfig = enemyMovementConfig.drone;
-    const side: 1 | -1 = player.x >= this.x ? -1 : 1;
-    const desiredX = player.x + side * moveConfig.idealDistanceX;
+    let desiredX = player.x + this.orbitSide * moveConfig.idealDistanceX;
+    if (desiredX < this.patrolMin + 40 || desiredX > this.patrolMax - 40) {
+      this.orbitSide = -this.orbitSide as 1 | -1;
+      desiredX = player.x + this.orbitSide * moveConfig.idealDistanceX;
+    }
+    desiredX = Phaser.Math.Clamp(desiredX, this.patrolMin + 32, this.patrolMax - 32);
     const desiredY = player.y + moveConfig.idealDistanceY + Math.sin(this.ageMs / moveConfig.verticalBobMs) * moveConfig.verticalBob;
     this.steerTo(desiredX, desiredY, 'chase', deltaMs);
   }

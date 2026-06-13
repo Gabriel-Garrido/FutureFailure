@@ -1,5 +1,6 @@
 import { assetKey, frameFor } from '../data/assetMap';
 import { elementSprites, portalSpriteMetrics, portalVisualRect } from '../data/elementSpriteConfig';
+import { enemySpriteProfileFor } from '../data/enemySpriteConfig';
 import { fitSpriteToOpaqueRect, hasOpaqueBounds } from './spriteFit';
 import { tutorialActions } from '../data/tutorialConfig';
 import { type LevelData, type RectData, type SignpostData, type TutorialPromptData, type VisualTileData } from '../data/levelTypes';
@@ -82,12 +83,13 @@ export class LevelBuilder {
     for (const enemy of data.enemies) {
       const patrolMin = enemy.patrolMin ?? enemy.x - 120;
       const patrolMax = enemy.patrolMax ?? enemy.x + 120;
+      const spriteProfile = enemySpriteProfileFor(enemy.type);
       let instance: EnemyBase;
-      if (enemy.type === 'drone') instance = new DroneEnemy(this.scene, enemy.x, enemy.y, assetKey('drone', 'fallback-drone'), elementSprites.enemies.drone.frame, patrolMin, patrolMax);
-      else if (enemy.type === 'mech') instance = new MechEnemy(this.scene, enemy.x, enemy.y, assetKey('mech', 'fallback-mech'), elementSprites.enemies.mech.frame, patrolMin, patrolMax);
-      else if (enemy.type === 'scout') instance = new ScoutEnemy(this.scene, enemy.x, enemy.y, assetKey('scout', 'fallback-scout'), elementSprites.enemies.scout.frame, patrolMin, patrolMax);
-      else if (enemy.type === 'sentinel') instance = new SentinelEnemy(this.scene, enemy.x, enemy.y, assetKey('sentinel', 'fallback-sentinel'), elementSprites.enemies.sentinel.frame, patrolMin, patrolMax);
-      else instance = new TrooperEnemy(this.scene, enemy.x, enemy.y, assetKey('trooper', 'fallback-trooper'), elementSprites.enemies.trooper.frame, patrolMin, patrolMax);
+      if (enemy.type === 'drone') instance = new DroneEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);
+      else if (enemy.type === 'mech') instance = new MechEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);
+      else if (enemy.type === 'scout') instance = new ScoutEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);
+      else if (enemy.type === 'sentinel') instance = new SentinelEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);
+      else instance = new TrooperEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);
       enemies.add(instance);
       this.createDebugPoint(enemy.x, enemy.y, COLORS.red, enemy.id);
     }

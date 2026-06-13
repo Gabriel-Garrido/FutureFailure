@@ -16,11 +16,22 @@ export const levelDesignConfig = {
     requiredPaces: ['learn', 'practice', 'test', 'reward', 'rest', 'synthesis'],
   },
   traversal: {
+    minLevelOneWidth: 8200,
+    maxLevelOneWidth: 8600,
     maxIntroGap: 320,
     maxDashGap: 430,
     minLandingWidth: 170,
     minArenaWidth: 900,
     minArenaEnemySpacing: 260,
+    enemyClusterWindow: 700,
+    maxEnemiesPerClusterWindow: 2,
+    maxArenaEnemies: 3,
+    minHighOneWayPlatforms: 8,
+  },
+  resources: {
+    minHealthBreakables: 8,
+    minEnergyBreakables: 4,
+    minBreakables: 24,
   },
   readability: {
     minLandmarks: 4,
