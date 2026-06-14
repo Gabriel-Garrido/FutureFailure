@@ -1,81 +1,18 @@
+import { gt } from '../game/i18n';
+
+// Getter-backed object — every property reads the current language at access
+// time, so all consumers automatically react to language changes without any
+// changes at their call sites.
 export const gameText = {
-  title: 'FUTURE FAILURE',
-  subtitle: 'Protocolo de Contencion',
-  menu: {
-    start: 'Pulsa X / A / Click para iniciar',
-    premise: 'Completa modulos y llega a la derecha.',
-    route: 'Domina controles, recoge tarjeta y limpia la arena.',
-    controls: 'Flechas | X salto | Z dash | C espada | V energia | Arriba usar',
-    kicker: 'ÚLTIMO PROTOCOLO',
-    heading: 'Entra en la brecha',
-    tagline: 'Domina el movimiento, el combate y cruza el portal.',
-    launch: 'INICIAR',
-    controlsTitle: 'CONTROLES',
-    controlKeys: [
-      { key: '← →', label: 'MOVER' },
-      { key: 'X', label: 'SALTAR' },
-      { key: 'Z', label: 'DASH' },
-      { key: 'C', label: 'ESPADA' },
-      { key: 'V', label: 'ENERGÍA' },
-      { key: '↑', label: 'INTERACTUAR' },
-    ],
-  },
-  hud: {
-    health: 'VIDA',
-    energy: 'ENERGIA',
-    keycardOff: 'TARJETA --',
-    keycardOn: 'TARJETA OK',
-    mapTitle: 'MAPA',
-    debug: 'F3 DEBUG',
-    controls: 'Esc: ayuda',
-  },
-  pause: {
-    title: 'PAUSA',
-    resume: 'Esc para continuar',
-    objective: 'Objetivo: llega al extremo derecho.',
-    controls: 'Flechas: mover\nX: saltar\nZ: dash\nC: espada\nV: energia\nArriba: interactuar',
-  },
-  gameOver: {
-    title: 'SENAL PERDIDA',
-    subtitle: 'Reiniciaras desde el inicio del protocolo.',
-    action: 'Pulsa X / A / Click para reaparecer',
-  },
-  objectives: {
-    first: 'Avanza a la derecha.',
-    movementComplete: 'Movimiento validado.',
-    combatComplete: 'Seguridad neutralizada.',
-    hasKeycard: 'Tarjeta obtenida.',
-    securityReduced: 'Defensa neutralizada.',
-    portalReady: 'Entra al portal.',
-    portalLocked: 'Despeja la arena.',
-    levelComplete: 'Fallo contenido.',
-  },
-  guidance: {
-    start: 'Corre y salta.',
-    climb: 'Usa dash en el aire.',
-    wallJump: 'Sube con la pared.',
-    hub: 'Lee y combate.',
-    reactor: 'Recoge la tarjeta.',
-    returnWithKey: 'Vuelve a la ruta principal.',
-    maintenance: 'Sube por mantenimiento.',
-    gauntlet: 'Avanza con cuidado.',
-    arena: 'Limpia la arena.',
-    exit: 'Cruza el portal.',
-  },
-  prompts: {
-    readTerminal: 'Arriba: leer',
-  },
-  terminals: {
-    intro: 'Ruta: salta, dash, pared, combate.',
-    fork: 'Derrota al soldado y sigue.',
-    exit: 'Limpia la arena y sal.',
-  },
-  zones: {
-    bay: 'Bahia de despertar',
-    maintenance: 'Mantenimiento superior',
-    hub: 'Nucleo de seguridad',
-    reactor: 'Drenaje del reactor',
-    arena: 'Arena final',
-    exit: 'Salida de grieta',
-  },
-} as const;
+  get title() { return gt().title; },
+  get subtitle() { return gt().subtitle; },
+  get menu() { return gt().menu; },
+  get hud() { return gt().hud; },
+  get pause() { return gt().pause; },
+  get gameOver() { return gt().gameOver; },
+  get objectives() { return gt().objectives; },
+  get guidance() { return gt().guidance; },
+  get prompts() { return gt().prompts; },
+  get terminals() { return gt().terminals; },
+  get zones() { return gt().zones; },
+};

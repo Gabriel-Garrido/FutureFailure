@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { gameText } from '../data/gameText';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../game/constants';
+import { GAME_LANGS, getCurrentLang, setGameLang, type Lang } from '../game/i18n';
 import { SaveSystem } from '../systems/SaveSystem';
 
 const ORBITRON = "'Orbitron', 'Bahnschrift', 'Segoe UI', sans-serif";
@@ -17,6 +18,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.createHeadline();
     this.createStartButton();
     this.createControls();
+    this.createLangSwitcher();
 
     this.input.keyboard?.once('keydown-X', () => this.startGame());
     this.input.keyboard?.on('keydown-R', () => {
@@ -25,7 +27,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
     this.input.gamepad?.once('down', () => this.startGame());
 
-    this.menuText(GAME_WIDTH / 2, 510, 'Pulsa R para borrar el guardado', {
+    this.menuText(GAME_WIDTH / 2, 510, gameText.menu.resetHint, {
       fontFamily: RAJDHANI,
       fontSize: '12px',
       color: '#5f7d86',
@@ -332,6 +334,59 @@ export class MainMenuScene extends Phaser.Scene {
       b.labelText.setPosition(capX + b.capW + keyLabelGap, rowY);
       x += b.capW + keyLabelGap + b.labelW + itemGap;
     }
+  }
+
+  /* ---------------- Language switcher ---------------- */
+  private createLangSwitcher(): void {
+    const pillW = 36;
+    const pillH = 20;
+    const gap = 4;
+    const totalW = GAME_LANGS.length * pillW + (GAME_LANGS.length - 1) * gap;
+    const startX = GAME_WIDTH - 14 - totalW;
+    const cy = 18;
+    const current = getCurrentLang();
+
+    GAME_LANGS.forEach(({ code, label }, i) => {
+      const x = startX + i * (pillW + gap);
+      const isActive = code === current;
+
+      const bg = this.add.graphics().setDepth(10);
+      const drawPill = (color: number, alpha: number, stroke: number, strokeAlpha: number): void => {
+        bg.clear();
+        bg.fillStyle(color, alpha);
+        bg.fillRoundedRect(x, cy - pillH / 2, pillW, pillH, 4);
+        bg.lineStyle(1, stroke, strokeAlpha);
+        bg.strokeRoundedRect(x, cy - pillH / 2, pillW, pillH, 4);
+      };
+      drawPill(
+        isActive ? COLORS.cyan : 0x0b161e,
+        isActive ? 1 : 0.75,
+        COLORS.cyan,
+        isActive ? 0 : 0.5,
+      );
+
+      const txt = this.add.text(x + pillW / 2, cy, label, {
+        fontFamily: ORBITRON,
+        fontStyle: '700',
+        fontSize: '10px',
+        color: isActive ? '#032027' : '#36f6ff',
+      }).setOrigin(0.5).setResolution(2).setDepth(11);
+
+      const hit = this.add.rectangle(x + pillW / 2, cy, pillW, pillH, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(12);
+
+      if (!isActive) {
+        hit.on('pointerover', () => drawPill(COLORS.cyan, 0.15, COLORS.cyan, 0.9));
+        hit.on('pointerout', () => drawPill(0x0b161e, 0.75, COLORS.cyan, 0.5));
+        hit.on('pointerdown', () => this.switchLang(code));
+      }
+    });
+  }
+
+  private switchLang(lang: Lang): void {
+    setGameLang(lang);
+    this.scene.restart();
   }
 
   private menuText(x: number, y: number, text: string, style: Phaser.Types.GameObjects.Text.TextStyle): Phaser.GameObjects.Text {
