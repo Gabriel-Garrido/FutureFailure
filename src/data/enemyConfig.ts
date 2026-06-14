@@ -25,14 +25,26 @@ export const enemyConfig = {
   },
   // Final boss: a heavy mech 5x the usual size with 5x the usual health.
   // Every third triple-burst it summons drones instead of energy shots and then
-  // waits triple the normal cooldown before attacking again.
+  // waits triple the normal cooldown before attacking again. After absorbing
+  // a set number of energy balls it is stunned and fully exposed.
   boss: {
     health: 50, // 5x mech
-    sizeScale: 5, // 5x visual + hitbox; scales muzzle/glow offsets too
-    detectRange: 900,
+    sizeScale: 5, // 5x visual + hitbox
+    detectRange: 1000,
+    // Firing band must keep retreat < attackStop so the boss actually reaches
+    // its aim/fire state (the previous *sizeScale tuning inverted the band).
+    closeRetreatDistance: 300,
+    attackStopDistance: 560,
+    leashDistance: 1500, // effectively never leashes inside its arena
+    shootCooldownMs: 1700,
+    windupMs: 620,
     droneVolleyEveryNthBurst: 3,
     droneVolleyCount: 3,
     droneVolleyCooldownMultiplier: 3,
+    enrageHealthFraction: 0.4, // below this, cooldowns tighten
+    enrageCooldownMultiplier: 0.6,
+    energyStunThreshold: 5, // energy balls absorbed before a stun
+    stunDurationMs: 4000,
     damage: 1,
   },
   scout: {

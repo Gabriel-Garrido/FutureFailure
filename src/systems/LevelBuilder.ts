@@ -92,10 +92,21 @@ export class LevelBuilder {
         health: enemyConfig.boss.health,
         sizeScale: enemyConfig.boss.sizeScale,
         detectRange: enemyConfig.boss.detectRange,
+        closeRetreatDistance: enemyConfig.boss.closeRetreatDistance,
+        attackStopDistance: enemyConfig.boss.attackStopDistance,
+        leashDistance: enemyConfig.boss.leashDistance,
+        shootCooldownMs: enemyConfig.boss.shootCooldownMs,
+        windupMs: enemyConfig.boss.windupMs,
+        enrageHealthFraction: enemyConfig.boss.enrageHealthFraction,
+        enrageCooldownMultiplier: enemyConfig.boss.enrageCooldownMultiplier,
         droneVolley: {
           everyNthBurst: enemyConfig.boss.droneVolleyEveryNthBurst,
           count: enemyConfig.boss.droneVolleyCount,
           cooldownMultiplier: enemyConfig.boss.droneVolleyCooldownMultiplier,
+        },
+        stun: {
+          energyThreshold: enemyConfig.boss.energyStunThreshold,
+          durationMs: enemyConfig.boss.stunDurationMs,
         },
       });
       else if (enemy.type === 'scout') instance = new ScoutEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);
