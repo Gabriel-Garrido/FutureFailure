@@ -1,5 +1,6 @@
 import { assetKeyFor } from './assetMap';
 import { type EnemyData } from './levelTypes';
+import { playerSpriteConfig } from './playerSpriteConfig';
 
 export type EnemyType = EnemyData['type'];
 export type EnemyVisualRole = 'idle' | 'move' | 'attack' | 'hurt' | 'death';
@@ -31,15 +32,18 @@ export type EnemySpriteProfile = {
 const range = (start: number, end: number): number[] => Array.from({ length: end - start + 1 }, (_value, index) => start + index);
 
 const defaultOrigin = { x: 0.5, y: 0.5 } as const;
+// Player uses 280px frames; humanoid enemy sheets use 209px frames.
+// Apply the frame-size ratio so both appear the same visual height in-game.
+export const humanoidScale = playerSpriteConfig.scale * (280 / 209);
 
 export const enemySpriteConfig = {
   trooper: {
     type: 'trooper',
     textureKey: assetKeyFor({ key: 'trooper', category: 'enemy', enemyType: 'trooper' }, 'fallback-trooper'),
     initialFrame: 0,
-    scale: 0.34,
+    scale: humanoidScale,
     origin: defaultOrigin,
-    body: { width: 90, height: 140, offsetX: 60, offsetY: 48 },
+    body: { width: 73, height: 167, offsetX: 42, offsetY: 25 },
     animations: {
       idle: { frames: range(0, 5), frameRate: 7, repeat: -1 },
       move: { frames: range(6, 11), frameRate: 10, repeat: -1 },
@@ -67,9 +71,9 @@ export const enemySpriteConfig = {
     type: 'mech',
     textureKey: assetKeyFor({ key: 'mech', category: 'enemy', enemyType: 'mech' }, 'fallback-mech'),
     initialFrame: 0,
-    scale: 0.5,
+    scale: humanoidScale,
     origin: { x: 0.5, y: 0.62 },
-    body: { width: 104, height: 148, offsetX: 52, offsetY: 44 },
+    body: { width: 88, height: 164, offsetX: 33, offsetY: 21 },
     animations: {
       idle: { frames: range(0, 5), frameRate: 7, repeat: -1 },
       move: { frames: range(6, 11), frameRate: 8, repeat: -1 },

@@ -52,7 +52,7 @@ export class TrooperEnemy extends EnemyBase {
       this.windupMs -= deltaMs;
       if (this.windupMs <= 0) {
         this.clearTint();
-        this.shootAt(projectiles, this.x + this.direction * 32, this.y - 20, player.x, player.y - 24, 310, COLORS.red, enemyConfig.trooper.damage);
+        this.shootAt(projectiles, this.x + this.direction * 43, this.y - 27, player.x, this.playerTorsoY(player), 310, COLORS.red, enemyConfig.trooper.damage);
         this.shootCooldownMs = enemyConfig.trooper.shootCooldownMs;
       }
       return;
@@ -87,7 +87,7 @@ export class TrooperEnemy extends EnemyBase {
   }
 
   private createAimLine(player: Player): void {
-    const line = this.scene.add.line(0, 0, this.x + this.direction * 32, this.y - 20, player.x, player.y - 24, COLORS.amber, 0.28)
+    const line = this.scene.add.line(0, 0, this.x + this.direction * 43, this.y - 27, player.x, this.playerTorsoY(player), COLORS.amber, 0.28)
       .setOrigin(0, 0)
       .setDepth(DEPTHS.effects);
     this.scene.tweens.add({

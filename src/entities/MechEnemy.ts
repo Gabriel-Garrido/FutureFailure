@@ -21,7 +21,7 @@ export class MechEnemy extends EnemyBase {
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setMaxVelocity(150, 680);
 
-    this.glow = scene.add.ellipse(this.x, this.y + 34, 96, 22, COLORS.red, 0.08)
+    this.glow = scene.add.ellipse(this.x, this.y + 46, 128, 30, COLORS.red, 0.08)
       .setDepth(DEPTHS.enemies - 1)
       .setBlendMode(Phaser.BlendModes.ADD);
   }
@@ -125,13 +125,13 @@ export class MechEnemy extends EnemyBase {
 
   private fireBurst(projectiles: Phaser.Physics.Arcade.Group, player: Player): void {
     this.clearTint();
-    const muzzleX = this.x + this.direction * 52;
-    const muzzleY = this.y - 34;
+    const muzzleX = this.x + this.direction * 70;
+    const muzzleY = this.y - 46;
     for (let i = 0; i < enemyConfig.mech.burstCount; i += 1) {
       this.scene.time.delayedCall(i * 155, () => {
         if (this.isDead()) return;
         const targetX = player.x + (i - 1) * 22;
-        const targetY = player.y - 24 + i * 8;
+        const targetY = this.playerTorsoY(player) + (i - 1) * 8;
         this.shootAt(projectiles, muzzleX, muzzleY, targetX, targetY, 285, COLORS.red, enemyConfig.mech.damage);
         this.kickbackPulse();
       });
@@ -141,7 +141,7 @@ export class MechEnemy extends EnemyBase {
   }
 
   private createAimLine(player: Player): void {
-    const line = this.scene.add.line(0, 0, this.x, this.y - 34, player.x, player.y - 24, COLORS.amber, 0.35)
+    const line = this.scene.add.line(0, 0, this.x, this.y - 46, player.x, this.playerTorsoY(player), COLORS.amber, 0.35)
       .setOrigin(0, 0)
       .setDepth(DEPTHS.effects);
     this.scene.tweens.add({
@@ -169,7 +169,7 @@ export class MechEnemy extends EnemyBase {
   }
 
   private syncGlow(): void {
-    this.glow.setPosition(this.x, this.y + 48);
+    this.glow.setPosition(this.x, this.y + 56);
     this.glow.setScale(this.flipX ? -1 : 1, 1);
   }
 

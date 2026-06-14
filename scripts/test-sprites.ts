@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { assetManifest } from '../src/assets/assetManifest';
-import { enemySpriteConfig, enemySpriteProfileFor, type EnemyType, type EnemyVisualRole } from '../src/data/enemySpriteConfig';
+import { enemySpriteConfig, humanoidScale, enemySpriteProfileFor, type EnemyType, type EnemyVisualRole } from '../src/data/enemySpriteConfig';
+import { playerSpriteConfig } from '../src/data/playerSpriteConfig';
 import { elementSprites } from '../src/data/elementSpriteConfig';
 import { levelOne } from '../src/data/levelOne';
 import { spriteAnimationDefinitions, spriteAnimationKey } from '../src/data/spriteAnimationConfig';
@@ -32,9 +33,13 @@ for (const definition of definitions) {
   assert(assetManifest.some((asset) => asset.key === definition.textureKey), `${definition.key} references missing texture ${definition.textureKey}.`);
 }
 
-for (const playerAnimation of ['idle', 'run', 'jump', 'fall', 'attack', 'dash']) {
+for (const playerAnimation of ['idle', 'run', 'jump', 'fall', 'land', 'attack', 'dash']) {
   assert(keys.includes(spriteAnimationKey('player', playerAnimation)), `Missing player animation: ${playerAnimation}.`);
 }
+const playerFall = definitions.find((definition) => definition.key === spriteAnimationKey('player', 'fall'));
+const playerLand = definitions.find((definition) => definition.key === spriteAnimationKey('player', 'land'));
+assert(playerFall?.frames.every((frame) => frame === 13) === true, 'Player fall animation must use the verified descending frame 13.');
+assert(playerLand?.frames.every((frame) => frame === 14) === true, 'Player land animation must use the verified landing frame 14.');
 
 const usedEnemyTypes = new Set<EnemyType>(levelOne.enemies.map((enemy) => enemy.type));
 for (const type of usedEnemyTypes) {
@@ -63,6 +68,8 @@ assert(!droneDeath.some((frame) => frame >= 30 && frame <= 35), 'Drone death mus
 
 assert(enemySpriteConfig.mech.initialFrame === 0, 'Mech must start on frame 0.');
 assert(enemySpriteConfig.mech.animations.death.frames.join(',') === '30,31,32,33,34,35', 'Mech death should use its actual collapse sequence.');
+assert(enemySpriteConfig.trooper.scale === humanoidScale, 'Trooper scale must compensate for enemy/player frame size ratio to match protagonist visual height.');
+assert(enemySpriteConfig.mech.scale === humanoidScale, 'Mech scale must compensate for enemy/player frame size ratio to match protagonist visual height.');
 
 for (const role of ['idle', 'move', 'attack'] as EnemyVisualRole[]) {
   assert(enemySpriteConfig.scout.animations[role].frames.join(',') === '0', `Scout ${role} must stay on the selected bot-with-wheels frame.`);
@@ -81,6 +88,16 @@ assert(elementSprites.doors.portal.frame === 35, 'Portal must use the verified d
 
 const preloadSource = await fs.readFile(path.join(root, 'src/scenes/PreloadScene.ts'), 'utf8');
 assert(preloadSource.includes('spriteAnimationDefinitions'), 'PreloadScene must register sprite animations from the central config.');
+
+const playerSource = await fs.readFile(path.join(root, 'src/entities/Player.ts'), 'utf8');
+assert(playerSource.includes('landingPoseMs'), 'Player must expose a short landing pose state.');
+assert(playerSource.includes("this.visual.play('player-land'"), 'Player must play the landing sprite when touching down.');
+assert(playerSource.includes("this.visual.play('player-fall'"), 'Player must play the falling sprite while descending.');
+
+const breakableSource = await fs.readFile(path.join(root, 'src/entities/BreakableObject.ts'), 'utf8');
+assert(breakableSource.includes('resolveVisualSinkPx'), 'Breakables must define a sprite sink to avoid floating above platforms.');
+assert(breakableSource.includes('bounds.y + bounds.height - bodyHeight - sinkUnits'), 'Breakable colliders must stay grounded while the visual sprite sinks into the surface.');
+assert(breakableSource.includes('this.visualSinkPx'), 'Breakable fitting must use the configured sink amount for intact and damaged frames.');
 
 const enemyBaseSource = await fs.readFile(path.join(root, 'src/entities/EnemyBase.ts'), 'utf8');
 assert(enemyBaseSource.includes('playEnemyAnimation'), 'EnemyBase must drive enemy sprite animations.');
