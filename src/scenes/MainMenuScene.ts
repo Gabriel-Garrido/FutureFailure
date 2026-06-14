@@ -13,6 +13,7 @@ export class MainMenuScene extends Phaser.Scene {
   create(): void {
     this.createBackground();
     this.createPortalAccent();
+    this.createLogo();
     this.createContent();
     this.input.keyboard?.once('keydown-X', () => this.startGame());
     this.input.keyboard?.on('keydown-R', () => {
@@ -59,34 +60,71 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
+  private createLogo(): void {
+    const cx = GAME_WIDTH / 2;
+    const baseY = 92;
+    if (!this.textures.exists('logo')) {
+      this.menuText(cx, baseY, gameText.title, {
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        fontSize: '58px',
+        color: '#e8feff',
+        stroke: '#031014',
+        strokeThickness: 6,
+      }).setOrigin(0.5);
+      return;
+    }
+
+    const targetWidth = 384;
+    const logo = this.add.image(0, 0, 'logo').setOrigin(0.5);
+    const scale = targetWidth / logo.width;
+    logo.setScale(scale);
+
+    const glow = this.add.image(0, 0, 'logo').setOrigin(0.5)
+      .setScale(scale * 1.05)
+      .setTint(COLORS.cyan)
+      .setAlpha(0.34)
+      .setBlendMode(Phaser.BlendModes.ADD);
+
+    const container = this.add.container(cx, baseY, [glow, logo]).setDepth(5);
+    this.tweens.add({
+      targets: container,
+      y: baseY + 8,
+      duration: 2400,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    this.tweens.add({
+      targets: glow,
+      alpha: 0.52,
+      duration: 1400,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
   private createContent(): void {
-    this.add.rectangle(GAME_WIDTH / 2, 304, 720, 238, COLORS.darkSteel, 0.78)
+    this.add.rectangle(GAME_WIDTH / 2, 318, 720, 224, COLORS.darkSteel, 0.78)
       .setStrokeStyle(2, COLORS.cyanDark, 0.62);
-    this.add.rectangle(GAME_WIDTH / 2, 304, 688, 204, 0x071015, 0.52)
+    this.add.rectangle(GAME_WIDTH / 2, 318, 688, 192, 0x071015, 0.52)
       .setStrokeStyle(1, COLORS.cyan, 0.18);
 
-    this.menuText(GAME_WIDTH / 2, 90, gameText.title, {
-      fontFamily: 'Arial, Helvetica, sans-serif',
-      fontSize: '58px',
-      color: '#e8feff',
-      stroke: '#031014',
-      strokeThickness: 6,
-    }).setOrigin(0.5);
-    this.menuText(GAME_WIDTH / 2, 146, gameText.subtitle, {
+    this.menuText(GAME_WIDTH / 2, 216, gameText.subtitle, {
       fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: '22px',
       color: '#36f6ff',
       stroke: '#031014',
       strokeThickness: 4,
     }).setOrigin(0.5);
-    this.menuText(GAME_WIDTH / 2, 238, gameText.menu.premise, {
+    this.menuText(GAME_WIDTH / 2, 250, gameText.menu.premise, {
       fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: '19px',
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 620 },
     }).setOrigin(0.5);
-    this.menuText(GAME_WIDTH / 2, 296, gameText.menu.route, {
+    this.menuText(GAME_WIDTH / 2, 302, gameText.menu.route, {
       fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: '16px',
       color: '#d7fbff',

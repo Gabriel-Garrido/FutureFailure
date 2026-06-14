@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "prepare:assets": "tsx scripts/prepare-assets.ts",
+    "prepare:logo": "tsx scripts/prepare-logo.ts",
     "test:assets": "tsx scripts/test-assets.ts",
     "test:level": "tsx scripts/test-level.ts",
     "test:combat": "tsx scripts/test-combat.ts",

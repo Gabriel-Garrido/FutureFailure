@@ -13,6 +13,9 @@ export class PreloadScene extends Phaser.Scene {
     this.load.on('progress', (progress: number) => {
       bar.width = 420 * progress;
     });
+    // Brand logo lives outside the asset pipeline (public/brand) so the
+    // prepare-assets step never rewrites or strips it.
+    this.load.image('logo', '/brand/logo.png');
     for (const asset of assetManifest) {
       if (asset.loadType === 'image') {
         this.load.image(asset.key, asset.path);

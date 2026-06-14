@@ -1,12 +1,232 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Future Failure</title>
+    <meta name="description" data-i18n-meta="meta.description" content="" />
+    <meta name="theme-color" content="#05070b" />
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <meta property="og:title" content="Future Failure" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/brand/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" src="/src/landing/main.ts"></script>
   </head>
   <body>
-    <div id="game"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <!-- Ambient futuristic backdrop -->
+    <div class="bg-layer" aria-hidden="true">
+      <div class="bg-grade"></div>
+      <div class="bg-grid"></div>
+      <div class="bg-scanlines"></div>
+      <div class="bg-vignette"></div>
+      <canvas id="motes"></canvas>
+    </div>
+
+    <!-- Language selection modal (first visit) -->
+    <div class="lang-modal" id="langModal" role="dialog" aria-modal="true" aria-labelledby="langModalHeading" hidden>
+      <div class="lang-modal__panel">
+        <div class="lang-modal__brand">
+          <img src="/brand/logo.png" alt="Future Failure" />
+        </div>
+        <p class="kicker" data-i18n="modal.kicker">PROTOCOLO DE CONTENCIÓN</p>
+        <h2 id="langModalHeading" data-i18n="modal.heading">Elige tu idioma</h2>
+        <div class="lang-modal__options" id="langOptions"></div>
+        <p class="lang-modal__sub" data-i18n="modal.sub">Podrás cambiarlo en cualquier momento.</p>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <header class="site-header" id="siteHeader">
+      <a class="brand" href="./index.html" aria-label="Future Failure">
+        <img src="/brand/logo.png" alt="Future Failure" />
+      </a>
+      <div class="site-header__right">
+        <div class="lang-switch" id="langSwitch" role="group" aria-label="Language"></div>
+        <a class="btn btn--ghost btn--sm" href="./game.html" data-i18n="nav.play">Jugar demo</a>
+      </div>
+    </header>
+
+    <main>
+      <!-- HERO -->
+      <section class="hero">
+        <div class="hero__glowA" aria-hidden="true"></div>
+        <div class="hero__glowB" aria-hidden="true"></div>
+        <div class="hero__inner">
+          <div class="hero__copy reveal">
+            <p class="kicker" data-i18n="hero.eyebrow">Protocolo de Contención</p>
+            <div class="hero__logo">
+              <img src="/brand/logo.png" alt="Future Failure" id="heroLogo" />
+            </div>
+            <p class="hero__tagline glitch" data-i18n="hero.tagline">La instalación colapsa.</p>
+            <p class="hero__body" data-i18n="hero.body"></p>
+            <div class="hero__actions">
+              <a class="btn btn--primary" href="./game.html">
+                <span class="btn__pulse" aria-hidden="true"></span>
+                <span data-i18n="hero.cta">Jugar la demo</span>
+              </a>
+              <a class="btn btn--ghost" href="#showcase" data-i18n="hero.cta2">Ver la acción</a>
+            </div>
+            <ul class="hero__badges">
+              <li data-i18n="hero.badge1">Jugable en el navegador</li>
+              <li data-i18n="hero.badge2">Compatible con mando</li>
+              <li data-i18n="hero.badge3">Acción-plataformas 2D</li>
+            </ul>
+          </div>
+          <div class="hero__stage reveal" aria-hidden="true">
+            <div class="hero__platform">
+              <div class="ff-sprite ff-sprite--player is-anim"></div>
+              <div class="hero__shadow"></div>
+            </div>
+            <div class="hero__drone">
+              <div class="ff-sprite ff-sprite--drone is-anim"></div>
+            </div>
+          </div>
+        </div>
+        <a class="scroll-cue" href="#features" aria-hidden="true"><span></span></a>
+      </section>
+
+      <!-- FEATURES -->
+      <section class="section" id="features">
+        <div class="section__head reveal">
+          <p class="kicker" data-i18n="features.kicker">CARACTERÍSTICAS</p>
+          <h2 data-i18n="features.heading">Movimiento afilado. Combate eléctrico.</h2>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card reveal" style="--accent: #36f6ff">
+            <div class="feature-card__icon ff-sprite ff-sprite--player is-anim"></div>
+            <h3 data-i18n="features.move.title">Movimiento fluido</h3>
+            <p data-i18n="features.move.body"></p>
+          </article>
+          <article class="feature-card reveal" style="--accent: #5cff9d">
+            <div class="feature-card__icon ff-sprite ff-sprite--vfx is-anim"></div>
+            <h3 data-i18n="features.combat.title">Espada + energía</h3>
+            <p data-i18n="features.combat.body"></p>
+          </article>
+          <article class="feature-card reveal" style="--accent: #ff355f">
+            <div class="feature-card__icon ff-sprite ff-sprite--mech is-anim"></div>
+            <h3 data-i18n="features.enemies.title">Una red hostil</h3>
+            <p data-i18n="features.enemies.body"></p>
+          </article>
+          <article class="feature-card reveal" style="--accent: #7a5cff">
+            <div class="feature-card__icon feature-card__icon--portal"></div>
+            <h3 data-i18n="features.worlds.title">Mundos reactivos</h3>
+            <p data-i18n="features.worlds.body"></p>
+          </article>
+        </div>
+      </section>
+
+      <!-- BESTIARY / SHOWCASE -->
+      <section class="section section--alt" id="showcase">
+        <div class="section__head reveal">
+          <p class="kicker" data-i18n="bestiary.kicker">AMENAZAS</p>
+          <h2 data-i18n="bestiary.heading">Lo que defiende la red</h2>
+          <p class="section__sub" data-i18n="bestiary.sub">Sprites reales del juego, en movimiento.</p>
+        </div>
+        <div class="bestiary">
+          <figure class="bestiary__card reveal" style="--accent: #36f6ff">
+            <div class="bestiary__stage"><div class="ff-sprite ff-sprite--player is-anim"></div></div>
+            <figcaption>
+              <h3 data-i18n="bestiary.player.name">Sujeto</h3>
+              <p data-i18n="bestiary.player.desc"></p>
+            </figcaption>
+          </figure>
+          <figure class="bestiary__card reveal" style="--accent: #ff355f">
+            <div class="bestiary__stage"><div class="ff-sprite ff-sprite--trooper is-anim"></div></div>
+            <figcaption>
+              <h3 data-i18n="bestiary.trooper.name">Soldado</h3>
+              <p data-i18n="bestiary.trooper.desc"></p>
+            </figcaption>
+          </figure>
+          <figure class="bestiary__card reveal" style="--accent: #36f6ff">
+            <div class="bestiary__stage"><div class="ff-sprite ff-sprite--drone is-anim"></div></div>
+            <figcaption>
+              <h3 data-i18n="bestiary.drone.name">Dron</h3>
+              <p data-i18n="bestiary.drone.desc"></p>
+            </figcaption>
+          </figure>
+          <figure class="bestiary__card reveal" style="--accent: #ffc857">
+            <div class="bestiary__stage"><div class="ff-sprite ff-sprite--mech is-anim"></div></div>
+            <figcaption>
+              <h3 data-i18n="bestiary.mech.name">Mech pesado</h3>
+              <p data-i18n="bestiary.mech.desc"></p>
+            </figcaption>
+          </figure>
+          <figure class="bestiary__card reveal" style="--accent: #7a5cff">
+            <div class="bestiary__stage"><div class="ff-sprite ff-sprite--sentinel is-anim"></div></div>
+            <figcaption>
+              <h3 data-i18n="bestiary.sentinel.name">Centinela</h3>
+              <p data-i18n="bestiary.sentinel.desc"></p>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- WORLDS -->
+      <section class="section" id="worlds">
+        <div class="section__head reveal">
+          <p class="kicker" data-i18n="worlds.kicker">ESCENARIOS</p>
+          <h2 data-i18n="worlds.heading">Sectores en colapso</h2>
+          <p class="section__sub" data-i18n="worlds.sub">Fondos reales de la instalación.</p>
+        </div>
+        <div class="worlds-grid">
+          <figure class="world-tile reveal" style="background-image: url('/assets/processed/background-cryo-cathedral-waterfall-04.png')">
+            <figcaption data-i18n="worlds.cryo">Catedral criogénica</figcaption>
+          </figure>
+          <figure class="world-tile reveal" style="background-image: url('/assets/processed/background-molten-foundry-core-07.png')">
+            <figcaption data-i18n="worlds.foundry">Fundición de magma</figcaption>
+          </figure>
+          <figure class="world-tile reveal" style="background-image: url('/assets/processed/background-overgrown-biolab-garden-10.png')">
+            <figcaption data-i18n="worlds.biolab">Biolab invadido</figcaption>
+          </figure>
+          <figure class="world-tile reveal" style="background-image: url('/assets/processed/background-voidgate-data-spire-02.png')">
+            <figcaption data-i18n="worlds.void">Aguja del vacío</figcaption>
+          </figure>
+          <figure class="world-tile reveal" style="background-image: url('/assets/processed/background-crystal-reactor-cavern-11.png')">
+            <figcaption data-i18n="worlds.reactor">Núcleo del reactor</figcaption>
+          </figure>
+          <figure class="world-tile reveal" style="background-image: url('/assets/processed/background-ruined-megacity-silhouette-03.png')">
+            <figcaption data-i18n="worlds.megacity">Megaciudad en ruinas</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section class="cta" id="play">
+        <div class="cta__glow" aria-hidden="true"></div>
+        <div class="cta__inner reveal">
+          <img class="cta__logo" src="/brand/logo.png" alt="Future Failure" />
+          <p class="kicker" data-i18n="cta.kicker">ÚLTIMO PROTOCOLO</p>
+          <h2 data-i18n="cta.heading">Entra en la brecha</h2>
+          <p class="cta__body" data-i18n="cta.body"></p>
+          <a class="btn btn--primary btn--lg" href="./game.html">
+            <span class="btn__pulse" aria-hidden="true"></span>
+            <span data-i18n="cta.button">Iniciar la demo</span>
+          </a>
+          <div class="controls">
+            <p class="controls__title" data-i18n="cta.controlsTitle">Controles</p>
+            <ul class="controls__list">
+              <li><kbd>← →</kbd><span data-i18n="controls.move">Mover</span></li>
+              <li><kbd>X</kbd><span data-i18n="controls.jump">Saltar</span></li>
+              <li><kbd>Z</kbd><span data-i18n="controls.dash">Dash</span></li>
+              <li><kbd>C</kbd><span data-i18n="controls.sword">Espada</span></li>
+              <li><kbd>V</kbd><span data-i18n="controls.energy">Energía</span></li>
+              <li><kbd>↑</kbd><span data-i18n="controls.interact">Interactuar</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <img src="/brand/logo.png" alt="Future Failure" />
+      <p data-i18n="footer.disclaimer">Future Failure — build de demostración en desarrollo.</p>
+      <p class="site-footer__note" data-i18n="footer.note">Demo en navegador · Hecho con Phaser</p>
+    </footer>
   </body>
 </html>
