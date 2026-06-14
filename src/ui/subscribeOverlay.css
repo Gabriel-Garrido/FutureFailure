@@ -1,0 +1,171 @@
+.ff-sub {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 30%, rgba(12, 116, 134, 0.28), rgba(3, 8, 12, 0.82) 60%), rgba(3, 8, 12, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-family: 'Rajdhani', 'Bahnschrift', 'Segoe UI', system-ui, sans-serif;
+  animation: ff-sub-fade 0.35s ease both;
+}
+
+@keyframes ff-sub-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ff-sub__panel {
+  position: relative;
+  width: min(440px, 100%);
+  padding: 30px 30px 26px;
+  background: linear-gradient(160deg, rgba(13, 26, 33, 0.96), rgba(7, 14, 19, 0.97));
+  border: 1px solid rgba(54, 246, 255, 0.45);
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgba(54, 246, 255, 0.08), 0 24px 70px rgba(0, 0, 0, 0.6), inset 0 0 60px rgba(54, 246, 255, 0.05);
+  color: #dff6fb;
+  text-align: center;
+  animation: ff-sub-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ff-sub-rise {
+  from { transform: translateY(18px) scale(0.97); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.ff-sub__logo {
+  width: 132px;
+  height: auto;
+  margin: 0 auto 14px;
+  display: block;
+  filter: drop-shadow(0 0 16px rgba(54, 246, 255, 0.4));
+}
+
+.ff-sub__eyebrow {
+  margin: 0 0 8px;
+  font-family: 'Orbitron', 'Bahnschrift', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: #36f6ff;
+  text-transform: uppercase;
+}
+
+.ff-sub__title {
+  margin: 0 0 10px;
+  font-family: 'Orbitron', 'Bahnschrift', sans-serif;
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.12;
+  color: #eafdff;
+  text-shadow: 0 0 18px rgba(54, 246, 255, 0.45);
+}
+
+.ff-sub__body {
+  margin: 0 auto 18px;
+  max-width: 360px;
+  font-size: 15.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #9fc2cc;
+}
+
+.ff-sub__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ff-sub__input {
+  width: 100%;
+  padding: 13px 15px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #eafdff;
+  background: rgba(5, 12, 16, 0.85);
+  border: 1px solid rgba(54, 246, 255, 0.35);
+  border-radius: 9px;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  box-sizing: border-box;
+}
+
+.ff-sub__input::placeholder { color: #5f7d86; }
+
+.ff-sub__input:focus {
+  border-color: rgba(54, 246, 255, 0.9);
+  box-shadow: 0 0 0 3px rgba(54, 246, 255, 0.18);
+}
+
+.ff-sub__input.is-error {
+  border-color: rgba(255, 53, 95, 0.85);
+  box-shadow: 0 0 0 3px rgba(255, 53, 95, 0.18);
+}
+
+.ff-sub__submit {
+  width: 100%;
+  padding: 13px 18px;
+  font-family: 'Orbitron', 'Bahnschrift', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #032027;
+  background: linear-gradient(180deg, #7df6ff, #19c8e0);
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease, opacity 0.12s ease;
+  box-shadow: 0 6px 20px rgba(54, 246, 255, 0.32);
+}
+
+.ff-sub__submit:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.ff-sub__submit:active { transform: translateY(0); }
+.ff-sub__submit:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+.ff-sub__status {
+  min-height: 18px;
+  margin: 12px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #9fc2cc;
+}
+
+.ff-sub__status.is-error { color: #ff6b88; }
+.ff-sub__status.is-success { color: #5cff9d; }
+
+.ff-sub__privacy {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #5f7d86;
+}
+
+.ff-sub__skip {
+  margin: 16px auto 0;
+  display: inline-block;
+  padding: 8px 14px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #9beef4;
+  background: transparent;
+  border: 1px solid rgba(54, 246, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.ff-sub__skip:hover {
+  background: rgba(54, 246, 255, 0.1);
+  border-color: rgba(54, 246, 255, 0.6);
+}
+
+@media (max-width: 520px) {
+  .ff-sub__panel { padding: 24px 20px 22px; }
+  .ff-sub__title { font-size: 22px; }
+}

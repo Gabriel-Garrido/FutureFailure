@@ -3,6 +3,9 @@ import { type EnemyData } from './levelTypes';
 import { playerSpriteConfig } from './playerSpriteConfig';
 
 export type EnemyType = EnemyData['type'];
+// The boss reuses the mech spritesheet at 5x scale, so it has no dedicated
+// sprite profile; every other ("sprited") enemy type owns one.
+export type SpritedEnemyType = Exclude<EnemyType, 'boss'>;
 export type EnemyVisualRole = 'idle' | 'move' | 'attack' | 'hurt' | 'death';
 
 export type EnemySpriteAnimationSpec = {
@@ -112,8 +115,10 @@ export const enemySpriteConfig = {
       death: { frames: [30, 31], frameRate: 8, repeat: 0 },
     },
   },
-} as const satisfies Record<EnemyType, EnemySpriteProfile>;
+} as const satisfies Record<SpritedEnemyType, EnemySpriteProfile>;
 
 export function enemySpriteProfileFor(type: EnemyType): EnemySpriteProfile {
+  // The boss is a heavy mech rendered 5x larger; it shares the mech sheet.
+  if (type === 'boss') return enemySpriteConfig.mech;
   return enemySpriteConfig[type];
 }

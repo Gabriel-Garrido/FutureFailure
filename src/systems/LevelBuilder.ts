@@ -1,5 +1,6 @@
 import { assetKey, frameFor } from '../data/assetMap';
 import { elementSprites, portalSpriteMetrics, portalVisualRect } from '../data/elementSpriteConfig';
+import { enemyConfig } from '../data/enemyConfig';
 import { enemySpriteProfileFor } from '../data/enemySpriteConfig';
 import { fitSpriteToOpaqueRect, hasOpaqueBounds } from './spriteFit';
 import { tutorialActions } from '../data/tutorialConfig';
@@ -87,6 +88,16 @@ export class LevelBuilder {
       let instance: EnemyBase;
       if (enemy.type === 'drone') instance = new DroneEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);
       else if (enemy.type === 'mech') instance = new MechEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);
+      else if (enemy.type === 'boss') instance = new MechEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax, {
+        health: enemyConfig.boss.health,
+        sizeScale: enemyConfig.boss.sizeScale,
+        detectRange: enemyConfig.boss.detectRange,
+        droneVolley: {
+          everyNthBurst: enemyConfig.boss.droneVolleyEveryNthBurst,
+          count: enemyConfig.boss.droneVolleyCount,
+          cooldownMultiplier: enemyConfig.boss.droneVolleyCooldownMultiplier,
+        },
+      });
       else if (enemy.type === 'scout') instance = new ScoutEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);
       else if (enemy.type === 'sentinel') instance = new SentinelEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);
       else instance = new TrooperEnemy(this.scene, enemy.x, enemy.y, spriteProfile, patrolMin, patrolMax);

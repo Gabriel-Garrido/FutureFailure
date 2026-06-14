@@ -1,3 +1,8 @@
+// `Lang` is the single source of truth for the available languages, shared by
+// both the landing page and the in-game text (../game/i18n.ts re-exports it).
+// To add a language: add it here and to `LANGS`, then fill the new column in
+// `translations` below and in `gameTranslations`. Run `npm run test:i18n` to
+// verify every language defines exactly the same keys (no missing/extra).
 export type Lang = 'es' | 'en' | 'pt' | 'fr';
 
 export const LANGS: ReadonlyArray<{ code: Lang; label: string; flag: string }> = [

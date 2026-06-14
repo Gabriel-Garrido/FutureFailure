@@ -1,11 +1,30 @@
 import { enemyConfig } from '../data/enemyConfig';
 import { enemyMovementConfig } from '../data/enemyMovementConfig';
 import { type EnemySpriteProfile } from '../data/enemySpriteConfig';
+import { type DamagePayload } from '../data/combatConfig';
 import { COLORS, DEPTHS } from '../game/constants';
 import { EnemyBase } from './EnemyBase';
 import { type Player } from './Player';
 
 type MechIntent = 'patrol' | 'holdRange' | 'retreat' | 'windup' | 'recover';
+
+export type MechDroneVolley = {
+  everyNthBurst: number;
+  count: number;
+  cooldownMultiplier: number;
+};
+
+export type MechOptions = {
+  health?: number;
+  /** Multiplies visual scale, hitbox and world-space muzzle/glow offsets. */
+  sizeScale?: number;
+  detectRange?: number;
+  /** When set, the enemy behaves as the boss and periodically summons drones. */
+  droneVolley?: MechDroneVolley;
+};
+
+export const BOSS_SUMMON_DRONES_EVENT = 'boss-summon-drones';
+export const BOSS_HEALTH_EVENT = 'boss-health';
 
 export class MechEnemy extends EnemyBase {
   private shootCooldownMs = 900;
@@ -14,14 +33,42 @@ export class MechEnemy extends EnemyBase {
   private intent: MechIntent = 'patrol';
   private readonly glow: Phaser.GameObjects.Ellipse;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, profile: EnemySpriteProfile, patrolMin: number, patrolMax: number) {
-    super(scene, x, y, profile, enemyConfig.mech.health, patrolMin, patrolMax, 'mech');
+  private readonly sizeScale: number;
+  private readonly detectRange: number;
+  private readonly droneVolley?: MechDroneVolley;
+  private readonly isBoss: boolean;
+  private readonly maxHealthValue: number;
+  private burstCounter = 0;
+  private revealed = false;
+
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    profile: EnemySpriteProfile,
+    patrolMin: number,
+    patrolMax: number,
+    options: MechOptions = {},
+  ) {
+    super(scene, x, y, profile, options.health ?? enemyConfig.mech.health, patrolMin, patrolMax, 'mech');
     this.knockbackMultiplier = 0.34;
+    this.sizeScale = options.sizeScale ?? 1;
+    this.detectRange = options.detectRange ?? enemyConfig.mech.detectRange;
+    this.droneVolley = options.droneVolley;
+    this.isBoss = Boolean(options.droneVolley);
+    this.maxHealthValue = options.health ?? enemyConfig.mech.health;
+
+    if (this.sizeScale !== 1) {
+      // Body and offsets are defined in source pixels and scale with the sprite,
+      // so growing the visual scale also grows the Arcade hitbox proportionally.
+      this.setScale(profile.scale * this.sizeScale);
+      this.knockbackMultiplier = 0.34 / this.sizeScale; // a heavier boss barely flinches
+    }
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setMaxVelocity(150, 680);
 
-    this.glow = scene.add.ellipse(this.x, this.y + 46, 128, 30, COLORS.red, 0.08)
+    this.glow = scene.add.ellipse(this.x, this.y + 46 * this.sizeScale, 128 * this.sizeScale, 30 * this.sizeScale, COLORS.red, 0.08)
       .setDepth(DEPTHS.enemies - 1)
       .setBlendMode(Phaser.BlendModes.ADD);
   }
@@ -49,9 +96,11 @@ export class MechEnemy extends EnemyBase {
     const distanceX = player.x - this.x;
     const distanceY = player.y - this.y;
     const distance = Math.abs(distanceX);
-    const canSee = distance < enemyConfig.mech.detectRange && Math.abs(distanceY) < 170;
+    const canSee = distance < this.detectRange && Math.abs(distanceY) < 170 * this.sizeScale;
     this.shootCooldownMs = Math.max(0, this.shootCooldownMs - deltaMs);
     this.recoverAfterBurstMs = Math.max(0, this.recoverAfterBurstMs - deltaMs);
+
+    if (canSee) this.revealBoss();
 
     if (!canSee) {
       this.intent = 'patrol';
@@ -89,7 +138,7 @@ export class MechEnemy extends EnemyBase {
       return;
     }
 
-    if (distance < moveConfig.closeRetreatDistance) {
+    if (distance < moveConfig.closeRetreatDistance * this.sizeScale) {
       this.intent = 'retreat';
       this.setMovementState('chase', 'mech-retreat');
       this.direction = distanceX >= 0 ? -1 : 1;
@@ -118,15 +167,49 @@ export class MechEnemy extends EnemyBase {
     if (this.shootCooldownMs <= 0) {
       this.windupMs = enemyConfig.mech.windupMs;
       this.setTint(COLORS.amber);
-      this.telegraph(COLORS.amber, 86, enemyConfig.mech.windupMs);
+      this.telegraph(COLORS.amber, 86 * this.sizeScale, enemyConfig.mech.windupMs);
       this.createAimLine(player);
     }
   }
 
+  takeDamage(payload: DamagePayload): boolean {
+    const result = super.takeDamage(payload);
+    if (this.isBoss) {
+      this.revealBoss();
+      this.scene.events.emit(BOSS_HEALTH_EVENT, Math.max(0, this.health), this.maxHealthValue, this.isDead());
+    }
+    return result;
+  }
+
+  private revealBoss(): void {
+    if (!this.isBoss || this.revealed) return;
+    this.revealed = true;
+    this.scene.events.emit(BOSS_HEALTH_EVENT, Math.max(0, this.health), this.maxHealthValue, false);
+  }
+
+  private muzzle(): { x: number; y: number } {
+    return { x: this.x + this.direction * 70 * this.sizeScale, y: this.y - 46 * this.sizeScale };
+  }
+
   private fireBurst(projectiles: Phaser.Physics.Arcade.Group, player: Player): void {
     this.clearTint();
-    const muzzleX = this.x + this.direction * 70;
-    const muzzleY = this.y - 46;
+    const { x: muzzleX, y: muzzleY } = this.muzzle();
+    this.burstCounter += 1;
+
+    const volley = this.droneVolley;
+    if (volley && this.burstCounter % volley.everyNthBurst === 0) {
+      this.summonDrones(muzzleX, muzzleY, volley.count);
+      this.shootCooldownMs = enemyConfig.mech.shootCooldownMs * volley.cooldownMultiplier;
+      this.recoverAfterBurstMs = 700;
+      return;
+    }
+
+    this.energyBurst(projectiles, player, muzzleX, muzzleY);
+    this.shootCooldownMs = enemyConfig.mech.shootCooldownMs;
+    this.recoverAfterBurstMs = 520;
+  }
+
+  private energyBurst(projectiles: Phaser.Physics.Arcade.Group, player: Player, muzzleX: number, muzzleY: number): void {
     for (let i = 0; i < enemyConfig.mech.burstCount; i += 1) {
       this.scene.time.delayedCall(i * 155, () => {
         if (this.isDead()) return;
@@ -136,12 +219,17 @@ export class MechEnemy extends EnemyBase {
         this.kickbackPulse();
       });
     }
-    this.shootCooldownMs = enemyConfig.mech.shootCooldownMs;
-    this.recoverAfterBurstMs = 520;
+  }
+
+  private summonDrones(muzzleX: number, muzzleY: number, count: number): void {
+    this.telegraph(COLORS.purple, 120 * this.sizeScale, 260);
+    this.scene.events.emit(BOSS_SUMMON_DRONES_EVENT, muzzleX, muzzleY, count, this.direction);
+    this.kickbackPulse();
   }
 
   private createAimLine(player: Player): void {
-    const line = this.scene.add.line(0, 0, this.x, this.y - 46, player.x, this.playerTorsoY(player), COLORS.amber, 0.35)
+    const { x: muzzleX, y: muzzleY } = this.muzzle();
+    const line = this.scene.add.line(0, 0, muzzleX, muzzleY, player.x, this.playerTorsoY(player), COLORS.amber, 0.35)
       .setOrigin(0, 0)
       .setDepth(DEPTHS.effects);
     this.scene.tweens.add({
@@ -156,7 +244,7 @@ export class MechEnemy extends EnemyBase {
   private kickbackPulse(): void {
     this.scene.tweens.add({
       targets: this,
-      x: this.x - this.direction * 5,
+      x: this.x - this.direction * 5 * this.sizeScale,
       duration: 45,
       yoyo: true,
       ease: 'Cubic.easeOut',
@@ -169,7 +257,7 @@ export class MechEnemy extends EnemyBase {
   }
 
   private syncGlow(): void {
-    this.glow.setPosition(this.x, this.y + 56);
+    this.glow.setPosition(this.x, this.y + 56 * this.sizeScale);
     this.glow.setScale(this.flipX ? -1 : 1, 1);
   }
 

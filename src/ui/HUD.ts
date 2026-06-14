@@ -216,12 +216,13 @@ export class HUD {
   }
 
   private zoneFor(worldX: number): string {
-    const t = worldX / this.levelWidth;
-    if (t < 0.24) return gameText.zones.bay;
-    if (t < 0.48) return gameText.zones.maintenance;
-    if (t < 0.70) return gameText.zones.hub;
-    if (t < 0.78) return gameText.zones.reactor;
-    if (t < 0.94) return gameText.zones.arena;
+    // Absolute world-X thresholds matching the level's section layout.
+    if (worldX < 2850) return gameText.zones.bay;
+    if (worldX < 5000) return gameText.zones.maintenance;
+    if (worldX < 6100) return gameText.zones.hub;
+    if (worldX < 7200) return gameText.zones.reactor;
+    if (worldX < 8400) return gameText.zones.arena;
+    if (worldX < 10550) return gameText.zones.boss;
     return gameText.zones.exit;
   }
 

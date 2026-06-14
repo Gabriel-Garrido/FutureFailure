@@ -7,11 +7,14 @@ import { gameText } from '../data/gameText';
 import { levelOne } from '../data/levelOne';
 import { tutorialPresentationConfig, type TutorialActionId, type TutorialPromptPayload } from '../data/tutorialConfig';
 import { type BreakableData, type RectData } from '../data/levelTypes';
+import { enemySpriteProfileFor } from '../data/enemySpriteConfig';
+import { DroneEnemy } from '../entities/DroneEnemy';
 import { EnemyBase } from '../entities/EnemyBase';
+import { BOSS_HEALTH_EVENT, BOSS_SUMMON_DRONES_EVENT } from '../entities/MechEnemy';
 import { Pickup, type PickupType } from '../entities/Pickup';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
-import { COLORS, EVENTS } from '../game/constants';
+import { COLORS, DEPTHS, EVENTS, GAME_WIDTH } from '../game/constants';
 import { AudioSystem } from '../systems/AudioSystem';
 import { CameraSystem } from '../systems/CameraSystem';
 import { CombatSystem } from '../systems/CombatSystem';
@@ -21,6 +24,7 @@ import { LevelBuilder, type BuiltLevel } from '../systems/LevelBuilder';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { SaveSystem, type SaveState } from '../systems/SaveSystem';
 import { PauseMenu } from '../ui/PauseMenu';
+import { showSubscribeOverlay } from '../ui/SubscribeOverlay';
 import { TouchControls } from '../ui/TouchControls';
 
 export class LevelOneScene extends Phaser.Scene {
@@ -37,6 +41,13 @@ export class LevelOneScene extends Phaser.Scene {
   private saveState: SaveState = { x: levelOne.playerSpawn.x, y: levelOne.playerSpawn.y, health: 5, hasKeycard: false };
   private nearbyTerminal?: Phaser.GameObjects.Zone;
   private finalOpen = false;
+  private demoCompleted = false;
+  private readonly bossDroneCap = 6;
+  private bossBar?: {
+    container: Phaser.GameObjects.Container;
+    fill: Phaser.GameObjects.Rectangle;
+    width: number;
+  };
   private shootCooldownMs = 0;
   private mapEmitMs = 0;
   private objectiveLockMs = 0;
@@ -161,6 +172,8 @@ export class LevelOneScene extends Phaser.Scene {
       this.audioSystem?.blip('hit');
       this.spawnBreakableDrop(breakable);
     });
+    this.events.on(BOSS_SUMMON_DRONES_EVENT, (x: number, y: number, count: number, direction: 1 | -1) => this.summonBossDrones(x, y, count, direction));
+    this.events.on(BOSS_HEALTH_EVENT, (current: number, max: number, dead: boolean) => this.updateBossHealthBar(current, max, dead));
     this.events.on('enemy-shoot', () => this.audioSystem?.blip('shoot'));
     this.events.on('player-dash', () => this.cameraSystem?.shake('light'));
     this.events.on(EVENTS.playerWallJump, (x: number, y: number) => {
@@ -230,7 +243,8 @@ export class LevelOneScene extends Phaser.Scene {
     else if (x < 5000) next = gameText.guidance.reactor;
     else if (x < 6100) next = gameText.guidance.maintenance;
     else if (x < 7200) next = gameText.guidance.gauntlet;
-    else if (x < levelOne.finalPortal.x) next = this.finalOpen ? gameText.guidance.exit : gameText.guidance.arena;
+    else if (x < 8400) next = this.finalOpen ? gameText.guidance.exit : gameText.guidance.arena;
+    else if (x < levelOne.finalPortal.x) next = this.finalOpen ? gameText.guidance.exit : gameText.guidance.boss;
     else next = gameText.guidance.exit;
 
     this.emitObjective(next);
@@ -310,13 +324,83 @@ export class LevelOneScene extends Phaser.Scene {
   }
 
   private tryFinishLevel(): void {
+    if (this.demoCompleted) return;
     if (!this.finalOpen) {
       this.game.events.emit(EVENTS.contextChanged, gameText.objectives.portalLocked);
       return;
     }
+    this.demoCompleted = true;
     this.game.events.emit(EVENTS.objectiveChanged, gameText.objectives.levelComplete);
     this.scene.pause();
-    this.add.text(this.cameras.main.scrollX + 480, this.cameras.main.scrollY + 240, 'GRIETA ASEGURADA', { fontFamily: 'Arial Black, Arial', fontSize: '40px', color: '#d7fbff' }).setOrigin(0.5).setDepth(2000);
+    showSubscribeOverlay(() => this.returnToMenu());
+  }
+
+  private returnToMenu(): void {
+    new SaveSystem().clear();
+    this.scene.resume();
+    this.scene.stop('UIScene');
+    this.scene.start('MainMenuScene');
+  }
+
+  /**
+   * Boss special attack: instead of an energy burst it summons drones that fly
+   * out in different directions. Drones join the live enemy group so the player
+   * must clear them (and the boss) before the portal opens. A concurrency cap
+   * keeps the fight fair across repeated volleys.
+   */
+  private summonBossDrones(x: number, y: number, count: number, direction: 1 | -1): void {
+    if (!this.level) return;
+    const liveBossDrones = (this.level.enemies.getChildren() as EnemyBase[])
+      .filter((enemy) => !enemy.isDead() && enemy.getData('bossDrone') === true).length;
+    const spawnCount = Math.max(0, Math.min(count, this.bossDroneCap - liveBossDrones));
+    if (spawnCount <= 0) return;
+
+    const profile = enemySpriteProfileFor('drone');
+    const launchAngles = [-2.42, -1.57, -0.72]; // up-left, up, up-right
+    for (let i = 0; i < spawnCount; i += 1) {
+      const offset = i - (spawnCount - 1) / 2;
+      const spawnX = Phaser.Math.Clamp(x + direction * 26 + offset * 84, 8460, 10520);
+      const spawnY = Phaser.Math.Clamp(y - 24, 360, 1000);
+      const drone = new DroneEnemy(this, spawnX, spawnY, profile, spawnX - 280, spawnX + 280);
+      drone.setData('bossDrone', true);
+      this.level.enemies.add(drone);
+      const body = drone.body as Phaser.Physics.Arcade.Body;
+      const angle = launchAngles[i % launchAngles.length];
+      body.setVelocity(Math.cos(angle) * 210, Math.sin(angle) * 210);
+      this.particles?.enemyHit(spawnX, spawnY, direction);
+    }
+    this.cameraSystem?.shake('hit');
+  }
+
+  private updateBossHealthBar(current: number, max: number, dead: boolean): void {
+    const width = 360;
+    const height = 12;
+    const cx = GAME_WIDTH / 2;
+    const y = 96;
+    if (!this.bossBar) {
+      const frame = this.add.rectangle(0, 0, width + 8, height + 8, COLORS.darkSteel, 0.82).setStrokeStyle(1, COLORS.red, 0.7);
+      const back = this.add.rectangle(-width / 2, 0, width, height, 0x1a0a12, 0.92).setOrigin(0, 0.5);
+      const fill = this.add.rectangle(-width / 2, 0, width, height, COLORS.red, 0.95).setOrigin(0, 0.5);
+      const label = this.add.text(0, -16, gameText.guidance.boss, {
+        fontFamily: 'Arial Black, Arial',
+        fontSize: '12px',
+        color: '#ffd7e0',
+        stroke: '#1a0207',
+        strokeThickness: 3,
+      }).setOrigin(0.5);
+      const container = this.add.container(cx, y, [frame, back, fill, label])
+        .setScrollFactor(0)
+        .setDepth(DEPTHS.ui + 60);
+      this.bossBar = { container, fill, width };
+    }
+    const ratio = Phaser.Math.Clamp(max > 0 ? current / max : 0, 0, 1);
+    this.bossBar.fill.setDisplaySize(this.bossBar.width * ratio, height);
+    this.bossBar.fill.setFillStyle(ratio > 0.35 ? COLORS.red : COLORS.amber, 0.95);
+    if (dead || current <= 0) {
+      const container = this.bossBar.container;
+      this.bossBar = undefined;
+      this.tweens.add({ targets: container, alpha: 0, duration: 520, ease: 'Cubic.easeOut', onComplete: () => container.destroy() });
+    }
   }
 
   private updateTriggerObjectives(): void {

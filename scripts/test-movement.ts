@@ -60,7 +60,9 @@ assert(drone.idealDistanceX > 120, 'Drone must keep a readable horizontal combat
 assert(drone.verticalBob > 0 && drone.verticalBob <= 48, 'Drone bob must be visible but not erratic.');
 
 for (const enemy of levelOne.enemies) {
-  assert(Boolean(enemyMovementConfig[enemy.type]), `${enemy.id} has no enemy movement config.`);
+  // The boss reuses the mech movement profile (it is a 5x heavy mech).
+  const movementType = enemy.type === 'boss' ? 'mech' : enemy.type;
+  assert(Boolean(enemyMovementConfig[movementType]), `${enemy.id} has no enemy movement config.`);
   assert(typeof enemy.patrolMin === 'number' && typeof enemy.patrolMax === 'number', `${enemy.id} must define patrol bounds.`);
   assert((enemy.patrolMin ?? 0) < enemy.x && enemy.x < (enemy.patrolMax ?? 0), `${enemy.id} must spawn inside patrol bounds.`);
   assert((enemy.patrolMax ?? 0) - (enemy.patrolMin ?? 0) >= 220, `${enemy.id} patrol bounds are too narrow for state movement.`);
@@ -99,8 +101,11 @@ assert(!enemyBaseSource.includes('this.x = Phaser.Math.Clamp'), 'Enemy damage mu
 
 const enemySpriteConfigSource = await fs.readFile(path.join(root, 'src/data/enemySpriteConfig.ts'), 'utf8');
 assert(enemySpriteConfigSource.includes('const humanoidScale = playerSpriteConfig.scale'), 'Humanoid enemies must share the protagonist visual scale.');
-assert(enemySpriteConfigSource.includes("body: { width: 98, height: 224, offsetX: 56, offsetY: 34 }"), 'Trooper collider must be retuned for protagonist-sized visuals.');
-assert(enemySpriteConfigSource.includes("body: { width: 118, height: 220, offsetX: 44, offsetY: 28 }"), 'Mech collider must be retuned for protagonist-sized visuals.');
+// Bodies are defined in local (pre-scale) pixels. When humanoidScale grew by
+// 280/209 the local dims were divided by the same ratio so the world-space
+// hitbox stays identical to the protagonist-matched tuning.
+assert(enemySpriteConfigSource.includes("body: { width: 73, height: 167, offsetX: 42, offsetY: 25 }"), 'Trooper collider must keep its protagonist-matched world hitbox after the humanoidScale change.');
+assert(enemySpriteConfigSource.includes("body: { width: 88, height: 164, offsetX: 33, offsetY: 21 }"), 'Mech collider must keep its protagonist-matched world hitbox after the humanoidScale change.');
 
 for (const relativePath of ['src/entities/TrooperEnemy.ts', 'src/entities/DroneEnemy.ts', 'src/entities/MechEnemy.ts', 'src/entities/ScoutEnemy.ts', 'src/entities/SentinelEnemy.ts']) {
   const source = await fs.readFile(path.join(root, relativePath), 'utf8');

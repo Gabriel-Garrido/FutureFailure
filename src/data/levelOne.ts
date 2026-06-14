@@ -31,12 +31,13 @@ const zones: ZoneData[] = [
   zone('zone-maintenance', 'Mantenimiento vertical', 5000, 80, 1100, 1080, 'maintenance'),
   zone('zone-gauntlet', 'Linea de presion', 6100, 80, 1100, 1080, 'gauntlet'),
   zone('zone-arena', 'Camara de salida', 7200, 80, 1200, 1080, 'arena'),
+  zone('zone-boss', 'Camara del nucleo', 8400, 80, 2400, 1080, 'boss'),
 ];
 
 const walls: RectData[] = [
-  wall('wall-ceiling', 0, 0, 8400, 80, 'global', 'Techo continuo para que el tutorial no se pueda saltar por arriba.'),
+  wall('wall-ceiling', 0, 0, 10800, 80, 'global', 'Techo continuo para que el tutorial no se pueda saltar por arriba.'),
   wall('wall-left-bound', 0, 0, 64, 1280, 'global'),
-  wall('wall-right-bound', 8336, 0, 64, 1280, 'global'),
+  wall('wall-right-bound', 10736, 0, 64, 1280, 'global'),
 ];
 
 const platforms: RectData[] = [
@@ -90,6 +91,10 @@ const platforms: RectData[] = [
   platform('arena-mid', 7700, 760, 300, 42, 'arena', undefined, 'oneWay'),
   platform('arena-high', 7850, 610, 260, 42, 'arena', undefined, 'oneWay'),
   platform('arena-right', 8030, 900, 280, 42, 'arena', undefined, 'oneWay'),
+
+  platform('floor-boss', 8400, 1080, 2400, 90, 'boss', 'Suelo continuo de la camara del nucleo para la pelea final.'),
+  platform('boss-ledge-left', 8480, 720, 220, 42, 'boss', 'Posicion elevada en el flanco izquierdo para esquivar al jefe.', 'oneWay'),
+  platform('boss-ledge-right', 10280, 720, 220, 42, 'boss', 'Posicion elevada en el flanco derecho antes del portal.', 'oneWay'),
 ];
 
 const baseTileRects = [...walls, ...platforms];
@@ -119,6 +124,8 @@ const decorations: VisualTileData[] = [
   deco('decor-gauntlet-panel', 18, 6840, 560, 96, 72, 'gauntlet'),
   deco('decor-arena-panel-left', 18, 7440, 785, 96, 72, 'arena'),
   deco('decor-arena-reactor', 25, 8110, 970, 76, 108, 'arena'),
+  deco('decor-boss-core', 23, 9520, 966, 132, 96, 'boss', 'Nucleo de fondo tras el mech guardian.'),
+  deco('decor-boss-exit-panel', 18, 10380, 786, 96, 72, 'boss'),
 ];
 
 const interactables: TerminalData[] = [
@@ -254,7 +261,49 @@ const design = {
       tests: ['arena', 'melee', 'energy', 'dash', 'jump', 'exit'],
       rewardIds: ['breakable-arena-health-cache', 'breakable-arena-energy-cache'],
       risk: 'high',
-      notes: 'Dron, mech y soldado espaciados; salida visible al extremo derecho.',
+      notes: 'Dron, mech y soldado espaciados antes de la antesala del jefe.',
+    },
+    {
+      id: 'beat-boss-approach',
+      label: 'Entrada a la camara del nucleo',
+      zone: 'boss',
+      startX: 8400,
+      endX: 9200,
+      pace: 'rest',
+      targetIntensity: 2,
+      teaches: ['arena'],
+      tests: ['dash', 'jump'],
+      rewardIds: ['breakable-boss-energy-cache'],
+      risk: 'low',
+      notes: 'Pasillo de aproximacion con recursos antes de despertar al jefe.',
+    },
+    {
+      id: 'beat-boss-fight',
+      label: 'Mech guardian',
+      zone: 'boss',
+      startX: 9200,
+      endX: 10000,
+      pace: 'synthesis',
+      targetIntensity: 5,
+      teaches: ['arena'],
+      tests: ['melee', 'energy', 'dash'],
+      rewardIds: ['breakable-boss-health-cache'],
+      risk: 'high',
+      notes: 'Jefe mech 5x: vida y tamano quintuplicados; cada tercera rafaga invoca drones y luego triplica su espera.',
+    },
+    {
+      id: 'beat-boss-exit',
+      label: 'Salida de la grieta',
+      zone: 'boss',
+      startX: 10000,
+      endX: 10720,
+      pace: 'reward',
+      targetIntensity: 2,
+      teaches: ['exit'],
+      tests: ['exit'],
+      rewardIds: ['breakable-boss-exit-cache'],
+      risk: 'low',
+      notes: 'Tras vencer al jefe, el portal final queda abierto al extremo derecho.',
     },
   ],
   optionalRoutes: [
@@ -317,7 +366,10 @@ const design = {
       { id: 'node-gauntlet', label: 'Gauntlet', beatId: 'beat-gauntlet', x: 6320, kind: 'skillCheck' },
       { id: 'node-gauntlet-reward', label: 'Recurso gauntlet', beatId: 'beat-gauntlet', x: 6820, kind: 'reward', landmarkId: 'breakable-gauntlet-energy-cache' },
       { id: 'node-arena-prep', label: 'Antesala', beatId: 'beat-arena-prep', x: 7240, kind: 'arena', landmarkId: 'terminal-arena' },
-      { id: 'node-exit', label: 'Portal', beatId: 'beat-final-arena', x: 8248, kind: 'exit', landmarkId: 'portal-exit' },
+      { id: 'node-final-arena', label: 'Arena final', beatId: 'beat-final-arena', x: 7860, kind: 'arena', landmarkId: 'enemy-arena-mech' },
+      { id: 'node-boss-approach', label: 'Aproximacion al jefe', beatId: 'beat-boss-approach', x: 8700, kind: 'skillCheck' },
+      { id: 'node-boss', label: 'Mech guardian', beatId: 'beat-boss-fight', x: 9530, kind: 'arena', landmarkId: 'enemy-boss-core' },
+      { id: 'node-exit', label: 'Portal', beatId: 'beat-boss-exit', x: 10600, kind: 'exit', landmarkId: 'portal-exit' },
     ],
     edges: [
       { id: 'edge-start-dash', from: 'node-start', to: 'node-dash', kind: 'critical', tests: ['move', 'jump'] },
@@ -338,7 +390,10 @@ const design = {
       { id: 'edge-gauntlet-reward', from: 'node-gauntlet', to: 'node-gauntlet-reward', kind: 'optional', unlock: 'objective:combat', rewardIds: ['breakable-gauntlet-energy-cache'], tests: ['dash', 'energy'] },
       { id: 'edge-gauntlet-return', from: 'node-gauntlet-reward', to: 'node-gauntlet', kind: 'return' },
       { id: 'edge-gauntlet-arena', from: 'node-gauntlet', to: 'node-arena-prep', kind: 'critical', tests: ['melee', 'energy', 'dash'] },
-      { id: 'edge-arena-exit', from: 'node-arena-prep', to: 'node-exit', kind: 'critical', tests: ['arena', 'melee', 'energy', 'dash', 'exit'] },
+      { id: 'edge-arena-final', from: 'node-arena-prep', to: 'node-final-arena', kind: 'critical', tests: ['arena', 'melee', 'energy'] },
+      { id: 'edge-final-boss-approach', from: 'node-final-arena', to: 'node-boss-approach', kind: 'critical', tests: ['dash', 'jump'] },
+      { id: 'edge-approach-boss', from: 'node-boss-approach', to: 'node-boss', kind: 'critical', tests: ['dash'] },
+      { id: 'edge-boss-exit', from: 'node-boss', to: 'node-exit', kind: 'critical', tests: ['melee', 'energy', 'exit'] },
     ],
   },
   signposts: [
@@ -351,7 +406,8 @@ const design = {
     signpost('sign-maintenance-climb', 'reward', 5350, 516, 170, 18, 'maintenance', 1, 'normal'),
     signpost('sign-gauntlet-danger', 'danger', 6500, 752, 170, 18, 'gauntlet', 1, 'normal'),
     signpost('sign-arena-entry', 'danger', 7240, 1010, 170, 18, 'arena', 1, 'strong'),
-    signpost('sign-exit-portal', 'exit', 8170, 970, 150, 18, 'arena', 1, 'strong'),
+    signpost('sign-boss-danger', 'danger', 8520, 1010, 200, 18, 'boss', 1, 'strong'),
+    signpost('sign-exit-portal', 'exit', 10360, 970, 160, 18, 'boss', 1, 'strong'),
   ],
   landmarks: [
     'terminal-start',
@@ -369,17 +425,18 @@ export const levelOne: LevelData = {
     name: 'Future Failure - Protocolo Inicial',
     notes: 'Tutorial amplio con curva exigente, recursos repartidos, verticalidad y arena final.',
   },
-  width: 8400,
+  width: 10800,
   height: 1280,
   backgroundKey: 'background-industrial-lab-corridor-20',
-  cameraBounds: { id: 'camera-main', type: 'cameraBounds', x: 0, y: 0, width: 8400, height: 1280, isFunctional: true },
+  cameraBounds: { id: 'camera-main', type: 'cameraBounds', x: 0, y: 0, width: 10800, height: 1280, isFunctional: true },
   playerSpawn: { id: 'spawn-player-start', type: 'spawn', x: 155, y: 985, zone: 'start', isFunctional: true },
   zones,
   mapMarkers: [
     { x: 190, label: 'Inicio', type: 'start' },
     { x: 4500, label: 'Keycard', type: 'key' },
     { x: 7240, label: 'Arena', type: 'arena' },
-    { x: 8320, label: 'Salida', type: 'exit' },
+    { x: 9530, label: 'Jefe', type: 'arena' },
+    { x: 10600, label: 'Salida', type: 'exit' },
   ],
   platforms,
   walls,
@@ -417,6 +474,9 @@ export const levelOne: LevelData = {
     { id: 'breakable-arena-health-cache', type: 'crate', x: 7710, y: 698, width: 62, height: 62, zone: 'arena', frame: elementSprites.destructibles.crate.frame, damagedFrame: 1, destroyedFrame: 2, debrisFrame: 30, health: 5, drop: { id: 'pickup-arena-health', type: 'healthLarge', riseY: 46 }, isFunctional: true },
     { id: 'breakable-arena-energy-cache', type: 'crate', x: 8050, y: 838, width: 62, height: 62, zone: 'arena', frame: elementSprites.destructibles.crate.frame, damagedFrame: 1, destroyedFrame: 2, debrisFrame: 30, health: 5, drop: { id: 'pickup-arena-energy', type: 'energyCell', riseY: 46 }, isFunctional: true },
     { id: 'breakable-arena-health-large', type: 'crate', x: 8150, y: 1018, width: 62, height: 62, zone: 'arena', frame: elementSprites.destructibles.crate.frame, damagedFrame: 1, destroyedFrame: 2, debrisFrame: 30, health: 5, drop: { id: 'pickup-arena-health-large', type: 'healthLarge', riseY: 46 }, isFunctional: true },
+    { id: 'breakable-boss-energy-cache', type: 'crate', x: 8420, y: 1018, width: 62, height: 62, zone: 'boss', frame: elementSprites.destructibles.crate.frame, damagedFrame: 1, destroyedFrame: 2, debrisFrame: 30, health: 5, drop: { id: 'pickup-boss-energy', type: 'energyCell', riseY: 46 }, isFunctional: true },
+    { id: 'breakable-boss-health-cache', type: 'crate', x: 8520, y: 1018, width: 62, height: 62, zone: 'boss', frame: elementSprites.destructibles.crate.frame, damagedFrame: 1, destroyedFrame: 2, debrisFrame: 30, health: 5, drop: { id: 'pickup-boss-health', type: 'healthLarge', riseY: 46 }, isFunctional: true },
+    { id: 'breakable-boss-exit-cache', type: 'crate', x: 10480, y: 1018, width: 62, height: 62, zone: 'boss', frame: elementSprites.destructibles.crate.frame, damagedFrame: 1, destroyedFrame: 2, debrisFrame: 30, health: 3, drop: { id: 'pickup-boss-exit-health', type: 'healthSmall', riseY: 44 }, isFunctional: true },
   ],
   enemies: [
     { id: 'enemy-security-trooper', type: 'trooper', x: 3000, y: 1000, zone: 'security', patrolMin: 2860, patrolMax: 3220, isFunctional: true, notes: 'Primer soldado con cobertura cercana.' },
@@ -431,6 +491,7 @@ export const levelOne: LevelData = {
     { id: 'enemy-arena-drone-left', type: 'drone', x: 7420, y: 760, zone: 'arena', patrolMin: 7240, patrolMax: 7650, isFunctional: true },
     { id: 'enemy-arena-mech', type: 'mech', x: 7860, y: 1000, zone: 'arena', patrolMin: 7580, patrolMax: 8180, isFunctional: true, notes: 'Mech como elite final con espacio amplio.' },
     { id: 'enemy-arena-trooper-right', type: 'trooper', x: 8220, y: 1000, zone: 'arena', patrolMin: 7980, patrolMax: 8320, isFunctional: true },
+    { id: 'enemy-boss-core', type: 'boss', x: 9530, y: 820, zone: 'boss', patrolMin: 8760, patrolMax: 10300, isFunctional: true, notes: 'Mech guardian 5x: vida y tamano quintuplicados; cada tercera rafaga triple invoca 3 drones y luego triplica su espera.' },
   ],
   interactables,
   terminals: interactables,
@@ -450,5 +511,5 @@ export const levelOne: LevelData = {
     { id: 'prompt-arena', text: 'Sobrevive y sal', actionId: 'arena', priority: 3, anchor: 'hud', x: 7220, y: 650, width: 720, height: 390, zone: 'arena', once: true, isFunctional: true },
   ],
   design,
-  finalPortal: { id: 'portal-exit', type: 'portal', x: 8248, y: 860, width: 82, height: 220, zone: 'arena', isFunctional: true },
+  finalPortal: { id: 'portal-exit', type: 'portal', x: 10600, y: 860, width: 82, height: 220, zone: 'boss', isFunctional: true },
 };

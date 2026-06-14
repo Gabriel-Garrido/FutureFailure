@@ -23,6 +23,18 @@ export const enemyConfig = {
     burstCount: 3,
     damage: 1,
   },
+  // Final boss: a heavy mech 5x the usual size with 5x the usual health.
+  // Every third triple-burst it summons drones instead of energy shots and then
+  // waits triple the normal cooldown before attacking again.
+  boss: {
+    health: 50, // 5x mech
+    sizeScale: 5, // 5x visual + hitbox; scales muzzle/glow offsets too
+    detectRange: 900,
+    droneVolleyEveryNthBurst: 3,
+    droneVolleyCount: 3,
+    droneVolleyCooldownMultiplier: 3,
+    damage: 1,
+  },
   scout: {
     health: 2,
     detectRange: 360,

@@ -17,7 +17,8 @@ export const levelDesignConfig = {
   },
   traversal: {
     minLevelOneWidth: 8200,
-    maxLevelOneWidth: 8600,
+    // Extended to fit the final boss arena added to the right of the exit arena.
+    maxLevelOneWidth: 11000,
     maxIntroGap: 320,
     maxDashGap: 430,
     minLandingWidth: 170,

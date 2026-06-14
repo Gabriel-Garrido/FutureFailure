@@ -25,7 +25,7 @@ export type ZoneData = RectData & {
 
 export type EnemyData = {
   id: string;
-  type: 'trooper' | 'drone' | 'mech' | 'scout' | 'sentinel';
+  type: 'trooper' | 'drone' | 'mech' | 'scout' | 'sentinel' | 'boss';
   x: number;
   y: number;
   zone: string;

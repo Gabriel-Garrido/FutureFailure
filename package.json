@@ -14,7 +14,8 @@
     "test:combat": "tsx scripts/test-combat.ts",
     "test:movement": "tsx scripts/test-movement.ts",
     "test:tutorial": "tsx scripts/test-tutorial.ts",
-    "test:sprites": "tsx scripts/test-sprites.ts"
+    "test:sprites": "tsx scripts/test-sprites.ts",
+    "test:i18n": "tsx scripts/test-i18n.ts"
   },
   "dependencies": {
     "phaser": "^3.90.0"

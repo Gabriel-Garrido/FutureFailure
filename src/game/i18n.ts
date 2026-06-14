@@ -2,6 +2,18 @@ import { DEFAULT_LANG, STORAGE_KEY, type Lang } from '../landing/i18n';
 
 export { DEFAULT_LANG, STORAGE_KEY, type Lang };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HOW TO ADD OR CHANGE GAME TEXT (scalable, all-languages-at-once):
+//   1. Add the field to the `GameText` type below.
+//   2. TypeScript will immediately flag every language in `gameTranslations`
+//      that is missing it (because it is typed `Record<Lang, GameText>`), so you
+//      fill the new string for ES / EN / PT / FR right where you see the error.
+//   3. Run `npm run test:i18n` to confirm every language (game + landing) shares
+//      the exact same key structure, including array lengths.
+// Adding a whole new language = add it to `LANGS` in ../landing/i18n.ts; the
+// `Record<Lang, …>` typing then forces a complete translation here too.
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const GAME_LANGS: ReadonlyArray<{ code: Lang; label: string }> = [
   { code: 'es', label: 'ES' },
   { code: 'en', label: 'EN' },
@@ -65,6 +77,7 @@ export type GameText = {
     maintenance: string;
     gauntlet: string;
     arena: string;
+    boss: string;
     exit: string;
   };
   prompts: { readTerminal: string };
@@ -75,11 +88,25 @@ export type GameText = {
     hub: string;
     reactor: string;
     arena: string;
+    boss: string;
     exit: string;
+  };
+  subscribe: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    placeholder: string;
+    submit: string;
+    sending: string;
+    success: string;
+    error: string;
+    invalid: string;
+    skip: string;
+    privacy: string;
   };
 };
 
-const gameTranslations: Record<Lang, GameText> = {
+export const gameTranslations: Record<Lang, GameText> = {
   es: {
     title: 'FUTURE FAILURE',
     subtitle: 'Protocolo de Contencion',
@@ -143,6 +170,7 @@ const gameTranslations: Record<Lang, GameText> = {
       maintenance: 'Sube por mantenimiento.',
       gauntlet: 'Avanza con cuidado.',
       arena: 'Limpia la arena.',
+      boss: 'Derrota al mech guardian.',
       exit: 'Cruza el portal.',
     },
     prompts: { readTerminal: 'Arriba: leer' },
@@ -157,7 +185,21 @@ const gameTranslations: Record<Lang, GameText> = {
       hub: 'Nucleo de seguridad',
       reactor: 'Drenaje del reactor',
       arena: 'Arena final',
+      boss: 'Camara del nucleo',
       exit: 'Salida de grieta',
+    },
+    subscribe: {
+      eyebrow: 'PROTOCOLO CONTENIDO',
+      title: 'Has cruzado la brecha',
+      body: 'Future Failure sigue en desarrollo. Suscríbete y recibe novedades, nuevos niveles y la versión completa.',
+      placeholder: 'tu@correo.com',
+      submit: 'Suscribirme',
+      sending: 'Enviando…',
+      success: '¡Gracias! Te avisaremos de cada avance.',
+      error: 'No se pudo enviar. Inténtalo de nuevo.',
+      invalid: 'Introduce un correo válido.',
+      skip: 'Volver al inicio',
+      privacy: 'Solo novedades del juego. Sin spam, cancela cuando quieras.',
     },
   },
 
@@ -224,6 +266,7 @@ const gameTranslations: Record<Lang, GameText> = {
       maintenance: 'Climb through maintenance.',
       gauntlet: 'Advance carefully.',
       arena: 'Clear the arena.',
+      boss: 'Defeat the guardian mech.',
       exit: 'Cross the portal.',
     },
     prompts: { readTerminal: 'Up: read' },
@@ -238,7 +281,21 @@ const gameTranslations: Record<Lang, GameText> = {
       hub: 'Security core',
       reactor: 'Reactor drain',
       arena: 'Final arena',
+      boss: 'Core chamber',
       exit: 'Breach exit',
+    },
+    subscribe: {
+      eyebrow: 'FAILURE CONTAINED',
+      title: 'You crossed the breach',
+      body: 'Future Failure is still in development. Subscribe for updates, new levels and the full release.',
+      placeholder: 'you@email.com',
+      submit: 'Subscribe',
+      sending: 'Sending…',
+      success: 'Thanks! We will keep you posted on every update.',
+      error: 'Could not send. Please try again.',
+      invalid: 'Enter a valid email.',
+      skip: 'Back to start',
+      privacy: 'Game updates only. No spam, unsubscribe anytime.',
     },
   },
 
@@ -305,6 +362,7 @@ const gameTranslations: Record<Lang, GameText> = {
       maintenance: 'Suba pela manutenção.',
       gauntlet: 'Avance com cuidado.',
       arena: 'Limpe a arena.',
+      boss: 'Derrote o mech guardião.',
       exit: 'Cruze o portal.',
     },
     prompts: { readTerminal: 'Cima: ler' },
@@ -319,7 +377,21 @@ const gameTranslations: Record<Lang, GameText> = {
       hub: 'Núcleo de segurança',
       reactor: 'Dreno do reator',
       arena: 'Arena final',
+      boss: 'Câmara do núcleo',
       exit: 'Saída da brecha',
+    },
+    subscribe: {
+      eyebrow: 'FALHA CONTIDA',
+      title: 'Você cruzou a brecha',
+      body: 'Future Failure ainda está em desenvolvimento. Inscreva-se para receber novidades, novos níveis e a versão completa.',
+      placeholder: 'voce@email.com',
+      submit: 'Inscrever-me',
+      sending: 'Enviando…',
+      success: 'Obrigado! Avisaremos a cada novidade.',
+      error: 'Não foi possível enviar. Tente novamente.',
+      invalid: 'Insira um e-mail válido.',
+      skip: 'Voltar ao início',
+      privacy: 'Apenas novidades do jogo. Sem spam, cancele quando quiser.',
     },
   },
 
@@ -386,6 +458,7 @@ const gameTranslations: Record<Lang, GameText> = {
       maintenance: 'Monte par la maintenance.',
       gauntlet: 'Avance prudemment.',
       arena: "Nettoie l'arène.",
+      boss: 'Vaincs le mech gardien.',
       exit: 'Traverse le portail.',
     },
     prompts: { readTerminal: 'Haut: lire' },
@@ -400,7 +473,21 @@ const gameTranslations: Record<Lang, GameText> = {
       hub: 'Cœur de sécurité',
       reactor: 'Drain du réacteur',
       arena: 'Arène finale',
+      boss: 'Chambre du noyau',
       exit: 'Sortie de la brèche',
+    },
+    subscribe: {
+      eyebrow: 'ÉCHEC CONTENU',
+      title: 'Tu as traversé la brèche',
+      body: 'Future Failure est encore en développement. Abonne-toi pour recevoir les nouveautés, les nouveaux niveaux et la version complète.',
+      placeholder: 'toi@email.com',
+      submit: "M'abonner",
+      sending: 'Envoi…',
+      success: 'Merci ! Nous te tiendrons informé de chaque avancée.',
+      error: "Échec de l'envoi. Réessaie.",
+      invalid: 'Saisis un e-mail valide.',
+      skip: "Retour à l'accueil",
+      privacy: 'Uniquement les nouveautés du jeu. Pas de spam, désabonnement à tout moment.',
     },
   },
 };
