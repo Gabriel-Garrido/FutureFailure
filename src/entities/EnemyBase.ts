@@ -206,6 +206,10 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     this.scene.events.emit('enemy-shoot');
   }
 
+  protected playerTorsoY(player: Player): number {
+    return player.torsoAimY();
+  }
+
   protected telegraph(color = COLORS.amber, size = 46, durationMs = 220): void {
     const marker = this.scene.add.ellipse(this.x, this.y - 18, size, size * 0.62)
       .setStrokeStyle(2, color, 0.86)

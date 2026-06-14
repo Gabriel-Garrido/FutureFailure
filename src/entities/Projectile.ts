@@ -2,6 +2,8 @@ import { COLORS, DEPTHS } from '../game/constants';
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {
   private static nextHitId = 1;
+  private static readonly PLAYER_RADIUS = 6;
+  private static readonly ENEMY_RADIUS = 7;
 
   damage = 1;
   fromPlayer = false;
@@ -30,13 +32,13 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.setPosition(x, y);
     this.setTint(tint);
     this.setAlpha(fromPlayer ? 0.92 : 1);
-    this.setScale(fromPlayer ? 0.92 : 1.16);
+    this.setScale(fromPlayer ? 0.92 : 1.04);
     this.setActive(true);
     this.setVisible(true);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.enable = true;
-    const radius = fromPlayer ? 6 : 10;
+    const radius = fromPlayer ? Projectile.PLAYER_RADIUS : Projectile.ENEMY_RADIUS;
     body.setCircle(radius, 8 - radius, 8 - radius);
     body.setVelocity(velocityX, velocityY);
   }
@@ -56,7 +58,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.enable = true;
-    body.setCircle(6, 2, 2);
+    body.setCircle(Projectile.PLAYER_RADIUS, 8 - Projectile.PLAYER_RADIUS, 8 - Projectile.PLAYER_RADIUS);
     body.setVelocity(velocityX, velocityY);
   }
 

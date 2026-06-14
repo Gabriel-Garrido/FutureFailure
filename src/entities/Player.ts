@@ -20,7 +20,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private attackStage: AttackStage | 0 = 0;
   private lastAttackStage: AttackStage | 0 = 0;
   private attackElapsedMs = 0;
-  private attackBufferMs = 0;
+  private comboQueueMs = 0;
+  private attackJumpBufferMs = 0;
+  private attackCooldownMs = 0;
   private attackHitJumpCancelMs = 0;
   private forceJumpPressedThisFrame = false;
   private comboTimerMs = 0;
@@ -30,6 +32,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private previousDashing = false;
   private lastVelocityY = 0;
   private dashParticleMs = 0;
+  private landingPoseMs = 0;
   private hurtFlashMs = 0;
   private hitTargets = new WeakSet<object>();
   private readonly recentDamageIds = new Map<string, number>();
@@ -139,6 +142,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     };
   }
 
+  torsoAimY(): number {
+    return this.y + playerSpriteConfig.targeting.torsoAimOffsetY;
+  }
+
+  isProjectilePointInsideDamageArea(x: number, y: number, padding = 0): boolean {
+    const radiusX = playerSpriteConfig.projectileDamageArea.radiusX + Math.max(0, padding);
+    const radiusY = playerSpriteConfig.projectileDamageArea.radiusY + Math.max(0, padding);
+    const dx = x - this.x;
+    const dy = y - (this.y + playerSpriteConfig.projectileDamageArea.offsetY);
+    const normalizedX = dx / radiusX;
+    const normalizedY = dy / radiusY;
+    return normalizedX * normalizedX + normalizedY * normalizedY <= 1;
+  }
+
   takeDamage(payload: DamagePayload): boolean {
     this.expireRecentDamageIds();
     if (payload.hitId && this.recentDamageIds.has(payload.hitId)) return false;
@@ -190,35 +207,38 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private updateAttackState(deltaMs: number, input: InputSnapshot): void {
-    this.attackBufferMs = Math.max(0, this.attackBufferMs - deltaMs);
+    this.comboQueueMs = Math.max(0, this.comboQueueMs - deltaMs);
+    this.attackJumpBufferMs = Math.max(0, this.attackJumpBufferMs - deltaMs);
+    this.attackCooldownMs = Math.max(0, this.attackCooldownMs - deltaMs);
     this.attackHitJumpCancelMs = Math.max(0, this.attackHitJumpCancelMs - deltaMs);
     this.comboTimerMs = Math.max(0, this.comboTimerMs - deltaMs);
 
     if (input.attackPressed && !this.movement.state.dead) {
-      if (this.canQueueCurrentAttack()) this.attackQueued = true;
-      else this.attackBufferMs = combatConfig.combo.inputBufferMs;
+      if (this.attackStage === 0 && this.attackCooldownMs <= 0) this.startAttack(1);
+      else if (this.canQueueCurrentAttack()) this.attackQueued = true;
+      else if (this.attackStage !== 0 && this.attackCooldownMs <= 0) this.comboQueueMs = combatConfig.combo.inputBufferMs;
+    }
+    if (input.jumpPressed && !this.movement.state.dead) {
+      this.attackJumpBufferMs = combatConfig.combo.jumpCancelBufferMs;
     }
 
     if (this.attackStage !== 0) {
       this.attackElapsedMs += deltaMs;
-      const jumpCancelRequested = input.jumpPressed || (input.jumpDown && this.attackHitJumpCancelMs > 0);
+      const jumpCancelRequested = this.attackJumpBufferMs > 0 || (input.jumpDown && this.attackHitJumpCancelMs > 0);
       if (jumpCancelRequested && this.canJumpCancelCurrentAttack()) {
         this.forceJumpPressedThisFrame = true;
+        this.attackJumpBufferMs = 0;
         this.endAttack(true);
       } else if (input.dashPressed && this.canCancelCurrentAttack()) {
         this.endAttack(true);
       } else {
         const config = this.currentAttackConfig();
         if (config && this.attackElapsedMs >= config.durationMs) {
-          const shouldChain = (this.attackQueued || this.attackBufferMs > 0) && config.stage < 3;
-          if (shouldChain) this.startAttack((config.stage + 1) as AttackStage);
+          const shouldChain = (this.attackQueued || this.comboQueueMs > 0) && config.stage < 3;
+          if (shouldChain && this.attackCooldownMs <= 0) this.startAttack((config.stage + 1) as AttackStage);
           else this.endAttack(false);
         }
       }
-    }
-
-    if (this.attackStage === 0 && this.attackBufferMs > 0 && !this.movement.state.dead) {
-      this.startAttack(this.resolveBufferedAttackStage());
     }
   }
 
@@ -228,7 +248,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.attackStage = stage;
     this.lastAttackStage = stage;
     this.attackElapsedMs = 0;
-    this.attackBufferMs = 0;
+    this.comboQueueMs = 0;
+    this.attackCooldownMs = combatConfig.combo.repeatIntervalMs;
     this.attackHitJumpCancelMs = 0;
     this.attackQueued = false;
     this.comboTimerMs = combatConfig.combo.resetMs;
@@ -275,6 +296,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     else if (this.movement.state.dashing) this.visual.play('player-dash', true);
     else if (!this.movement.state.grounded && body.velocity.y < 0) this.visual.play('player-jump', true);
     else if (!this.movement.state.grounded) this.visual.play('player-fall', true);
+    else if (this.landingPoseMs > 0) this.visual.play('player-land', true);
     else if (Math.abs(body.velocity.x) > 20) this.visual.play('player-run', true);
     else this.visual.play('player-idle', true);
   }
@@ -293,6 +315,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private updateFeedback(deltaMs: number): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     this.dashParticleMs = Math.max(0, this.dashParticleMs - deltaMs);
+    this.landingPoseMs = Math.max(0, this.landingPoseMs - deltaMs);
     this.hurtFlashMs = Math.max(0, this.hurtFlashMs - deltaMs);
     this.expireRecentDamageIds();
     this.updateDamageReadability();
@@ -305,6 +328,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
     if (!this.previousGrounded && this.movement.state.grounded && this.lastVelocityY > 340) {
       this.particles.land(this.x, this.y);
+      this.landingPoseMs = Phaser.Math.Clamp(this.lastVelocityY * 0.16, 70, 135);
     }
     this.previousGrounded = this.movement.state.grounded;
     this.lastVelocityY = body.velocity.y;
@@ -351,6 +375,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const endedStage = this.attackStage;
     this.attackStage = 0;
     this.attackElapsedMs = 0;
+    if (!cancelled) this.attackJumpBufferMs = 0;
     this.attackHitJumpCancelMs = 0;
     this.attackQueued = false;
     if (endedStage === 3) {
@@ -359,13 +384,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     } else {
       this.comboTimerMs = cancelled ? combatConfig.combo.resetMs * 0.55 : combatConfig.combo.resetMs;
     }
-  }
-
-  private resolveBufferedAttackStage(): AttackStage {
-    if (this.comboTimerMs > 0 && this.lastAttackStage > 0 && this.lastAttackStage < 3) {
-      return (this.lastAttackStage + 1) as AttackStage;
-    }
-    return 1;
+    const targetCooldownMs = endedStage === 3
+      ? combatConfig.combo.finisherRecoveryMs
+      : cancelled
+        ? combatConfig.combo.cancelRecoveryMs
+        : combatConfig.combo.recoveryMs;
+    this.attackCooldownMs = Math.max(this.attackCooldownMs, targetCooldownMs);
   }
 
   private queueAttackLunge(config: AttackStageConfig): void {

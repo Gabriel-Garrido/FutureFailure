@@ -72,9 +72,14 @@ export type AttackStageConfig = {
 
 export const combatConfig = {
   combo: {
-    inputBufferMs: 150,
-    resetMs: 520,
+    inputBufferMs: 420,
+    jumpCancelBufferMs: 160,
+    repeatIntervalMs: 300,
+    resetMs: 760,
     hitConfirmJumpCancelMs: 180,
+    recoveryMs: 300,
+    cancelRecoveryMs: 300,
+    finisherRecoveryMs: 420,
     stages: [
       {
         stage: 1,

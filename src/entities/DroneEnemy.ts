@@ -47,7 +47,7 @@ export class DroneEnemy extends EnemyBase {
       if (this.windupMs <= 0) {
         if (this.hitFlashMs <= 0) this.clearTint();
         const aimDir = player.x >= this.x ? 1 : -1;
-        this.shootAt(projectiles, this.x + aimDir * 24, this.y, player.x, player.y - 8, 240, COLORS.red, enemyConfig.drone.damage);
+        this.shootAt(projectiles, this.x + aimDir * 24, this.y, player.x, this.playerTorsoY(player), 240, COLORS.red, enemyConfig.drone.damage);
         this.shootCooldownMs = enemyConfig.drone.shootCooldownMs;
       }
       return;

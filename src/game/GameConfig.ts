@@ -26,6 +26,7 @@ export function createGameConfig(): Phaser.Types.Core.GameConfig {
     },
     input: {
       gamepad: true,
+      activePointers: 4,
     },
     physics: {
       default: 'arcade',

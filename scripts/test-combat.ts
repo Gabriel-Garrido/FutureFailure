@@ -26,6 +26,13 @@ for (const [index, stage] of combatConfig.combo.stages.entries()) {
 
 assert(combatConfig.combo.stages[2].isFinisher, 'Third combo stage must be marked as finisher.');
 assert(combatConfig.combo.stages[2].amount > combatConfig.combo.stages[0].amount, 'Finisher must deal more damage than opener.');
+assert(combatConfig.combo.repeatIntervalMs === 300, 'Sword attacks must enforce exactly 300 ms between attack starts.');
+assert(combatConfig.combo.inputBufferMs >= combatConfig.combo.repeatIntervalMs, 'Sword combo queue buffer must remain long enough to preserve valid chain inputs.');
+assert(combatConfig.combo.resetMs > combatConfig.combo.repeatIntervalMs, 'Combo reset must outlast the sword repeat interval so chained hits remain possible.');
+assert(combatConfig.combo.recoveryMs >= combatConfig.combo.repeatIntervalMs, 'Sword attacks must not end with a shorter recovery than the repeat interval.');
+assert(combatConfig.combo.cancelRecoveryMs >= combatConfig.combo.repeatIntervalMs, 'Sword cancel recovery must still respect the repeat interval.');
+assert(combatConfig.combo.finisherRecoveryMs >= combatConfig.combo.repeatIntervalMs, 'Sword finisher recovery must still respect the repeat interval.');
+assert(combatConfig.combo.jumpCancelBufferMs >= 120 && combatConfig.combo.jumpCancelBufferMs <= 220, 'Sword jump-cancel buffer must preserve quick jump input without feeling automatic.');
 assert(combatConfig.projectile.enemy.knockback.enabled === false, 'Enemy projectiles must not apply knockback.');
 assert(combatConfig.projectile.enemy.hitstop.durationMs === 0 && combatConfig.projectile.enemy.hitstop.timeScale === 1, 'Enemy projectiles must not use global hitstop.');
 assert(combatConfig.projectile.enemy.reaction.mode === 'stagger', 'Enemy projectiles must use local stagger feedback.');
@@ -70,6 +77,7 @@ assert(combatSystemSource.includes('applyPlayerDamage'), 'CombatSystem must cent
 assert(combatSystemSource.includes('cancelHitstop'), 'CombatSystem must be able to reset hitstop before player projectile damage reactions.');
 assert(combatSystemSource.includes('consumeImpact'), 'Enemy projectile overlaps must consume impact idempotently.');
 assert(combatSystemSource.includes('player.projectileHurtZone'), 'Enemy projectile damage must use the stable player projectile hurt zone.');
+assert(combatSystemSource.includes('isProjectilePointInsideDamageArea'), 'Enemy projectile damage must confirm a tighter torso hit area before applying damage.');
 assert(combatSystemSource.includes('instanceof Projectile'), 'Enemy projectile overlap must resolve the projectile by type, not by group-vs-single argument order.');
 assert(combatSystemSource.includes('deflectEnemyProjectile'), 'CombatSystem must let melee attacks deflect enemy projectiles.');
 assert(combatSystemSource.includes('projectile.fromPlayer'), 'CombatSystem must distinguish deflected projectiles from hostile projectiles.');
@@ -80,17 +88,36 @@ assert(projectileSource.includes('hitId'), 'Projectile must expose hitId for dam
 assert(projectileSource.includes('consumeImpact'), 'Projectile must prevent duplicate impact resolution.');
 assert(projectileSource.includes('deflect('), 'Projectile must be able to change ownership when deflected.');
 assert(projectileSource.includes('player-deflect-'), 'Deflected projectiles must receive a fresh player-owned hit id.');
-assert(projectileSource.includes('fromPlayer ? 6 : 10'), 'Enemy projectiles must use a forgiving damage radius.');
+assert(projectileSource.includes('ENEMY_RADIUS = 7'), 'Enemy projectile hit radius must stay tighter than the old oversized value.');
 
 const playerSource = await fs.readFile(path.join(root, 'src/entities/Player.ts'), 'utf8');
+const playerSpriteConfigSource = await fs.readFile(path.join(root, 'src/data/playerSpriteConfig.ts'), 'utf8');
 assert(playerSource.includes('recentDamageIds'), 'Player must remember recent damage ids.');
 assert(playerSource.includes('projectileHurtZone'), 'Player must expose an animation-independent projectile hurt zone.');
 assert(playerSource.includes('hitConfirmJumpCancelMs'), 'Player attacks must expose hit-confirm jump cancel timing.');
 assert(playerSource.includes('forceJumpPressedThisFrame'), 'Player must preserve jump input when canceling a hit-confirmed attack.');
+assert(playerSource.includes('attackJumpBufferMs'), 'Player must buffer jump inputs pressed during sword startup/recovery.');
+assert(playerSource.includes('jumpCancelBufferMs'), 'Player must use the configured jump-cancel buffer timing.');
+assert(playerSource.includes('this.attackJumpBufferMs > 0'), 'Buffered jumps must be able to trigger attack jump cancel once valid.');
+assert(playerSource.includes('attackCooldownMs'), 'Player attacks must enforce a cooldown cadence between sword swings.');
+assert(playerSource.includes('repeatIntervalMs'), 'Player sword cadence must be driven by a central repeat-interval config.');
+assert(playerSource.includes('Math.max(this.attackCooldownMs, targetCooldownMs)'), 'Player must preserve the longest sword lock so spam cannot skip cadence.');
+assert(playerSource.includes('comboQueueMs'), 'Player must separate combo queue timing from attack cooldown timing.');
+assert(!playerSource.includes('this.attackStage === 0 && this.attackBufferMs > 0'), 'Player must not convert neutral cooldown attack presses into delayed attacks.');
+assert(playerSource.includes('isProjectilePointInsideDamageArea'), 'Player must expose a narrow torso hit validation for enemy projectiles.');
+assert(playerSource.includes('torsoAimY'), 'Player must expose a shared torso aiming anchor.');
+assert(playerSource.includes('finisherRecoveryMs'), 'Player finisher attacks must enforce a heavier recovery cadence.');
 assert(!playerSource.includes('this.setPosition('), 'Player damage flow should not reposition the hero body.');
+assert(playerSpriteConfigSource.includes('width: 80'), 'Player projectile hurt zone width must stay tightened to avoid unfair enemy projectile hits.');
+assert(playerSpriteConfigSource.includes('height: 160'), 'Player projectile hurt zone height must stay tightened to avoid unfair enemy projectile hits.');
+assert(playerSpriteConfigSource.includes('projectileDamageArea'), 'Player sprite config must define a second-stage projectile damage area.');
+assert(playerSpriteConfigSource.includes('torsoAimOffsetY'), 'Player sprite config must define a shared torso aim offset.');
 
 const movementSource = await fs.readFile(path.join(root, 'src/systems/MovementController.ts'), 'utf8');
 assert(movementSource.includes('applyRetainedDamageVelocity'), 'MovementController must support retained-velocity damage reactions.');
+
+const enemyBaseSource = await fs.readFile(path.join(root, 'src/entities/EnemyBase.ts'), 'utf8');
+assert(enemyBaseSource.includes('player.torsoAimY()'), 'Enemies must aim at the player torso via the shared anchor.');
 
 // Drop economy: defeating enemies must reward the player, with energy the most
 // likely pickup so the energy-driven ranged attack stays sustainable.

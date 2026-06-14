@@ -12,6 +12,10 @@ type TouchControlButton = {
 
 const storageKey = 'future-failure-touch-controls-visible';
 
+function isMobileTouchDefault(scene: Phaser.Scene): boolean {
+  return scene.sys.game.device.input.touch && !scene.sys.game.device.os.desktop;
+}
+
 export class TouchControls {
   private readonly controlsLayer: Phaser.GameObjects.Container;
   private readonly toggleText: Phaser.GameObjects.Text;
@@ -25,6 +29,7 @@ export class TouchControls {
       return;
     }
 
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.releaseAllTouchButtons());
     this.visibleControls = this.loadVisibility();
     this.controlsLayer = scene.add.container(0, 0).setScrollFactor(0).setDepth(DEPTHS.ui + 20);
     this.createButtons();
@@ -106,9 +111,12 @@ export class TouchControls {
 
   private loadVisibility(): boolean {
     try {
-      return window.localStorage.getItem(storageKey) !== 'off';
+      const stored = window.localStorage.getItem(storageKey);
+      if (stored === 'on') return true;
+      if (stored === 'off') return false;
+      return isMobileTouchDefault(this.scene);
     } catch {
-      return true;
+      return isMobileTouchDefault(this.scene);
     }
   }
 

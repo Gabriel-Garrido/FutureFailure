@@ -60,6 +60,11 @@ export class InputSystem {
       Phaser.Input.Keyboard.KeyCodes.Z,
       Phaser.Input.Keyboard.KeyCodes.V,
     ]);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.releaseAllTouchButtons());
+    scene.game.events.on(Phaser.Core.Events.BLUR, this.releaseAllTouchButtons, this);
+    scene.game.events.once(Phaser.Core.Events.DESTROY, () => {
+      scene.game.events.off(Phaser.Core.Events.BLUR, this.releaseAllTouchButtons, this);
+    });
   }
 
   bindTouchButton(name: TouchButtonName, zone: Phaser.GameObjects.Zone): void {
@@ -70,6 +75,7 @@ export class InputSystem {
     });
     zone.on('pointerup', (pointer: Phaser.Input.Pointer) => this.releaseTouch(name, pointer));
     zone.on('pointerout', (pointer: Phaser.Input.Pointer) => this.releaseTouch(name, pointer));
+    zone.on('pointerupoutside', (pointer: Phaser.Input.Pointer) => this.releaseTouch(name, pointer));
   }
 
   releaseAllTouchButtons(): void {

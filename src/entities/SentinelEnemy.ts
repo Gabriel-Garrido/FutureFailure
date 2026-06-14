@@ -93,7 +93,7 @@ export class SentinelEnemy extends EnemyBase {
     const cfg = enemyConfig.sentinel;
     const muzzleX = this.x + this.direction * 28;
     const muzzleY = this.y;
-    const aimAngle = Phaser.Math.Angle.Between(muzzleX, muzzleY, player.x, player.y - 18);
+    const aimAngle = Phaser.Math.Angle.Between(muzzleX, muzzleY, player.x, this.playerTorsoY(player));
     const spread = Phaser.Math.DegToRad(cfg.spreadAngleDeg);
     for (const angle of [aimAngle - spread, aimAngle, aimAngle + spread]) {
       const line = this.scene.add.line(0, 0, muzzleX, muzzleY, muzzleX + Math.cos(angle) * 150, muzzleY + Math.sin(angle) * 150, COLORS.red, 0.22)
@@ -113,7 +113,7 @@ export class SentinelEnemy extends EnemyBase {
     const cfg = enemyConfig.sentinel;
     const muzzleX = this.x + this.direction * 28;
     const muzzleY = this.y;
-    const aimAngle = Phaser.Math.Angle.Between(muzzleX, muzzleY, player.x, player.y - 18);
+    const aimAngle = Phaser.Math.Angle.Between(muzzleX, muzzleY, player.x, this.playerTorsoY(player));
     const spread = Phaser.Math.DegToRad(cfg.spreadAngleDeg);
     const speed = 215;
     for (const angle of [aimAngle - spread, aimAngle, aimAngle + spread]) {

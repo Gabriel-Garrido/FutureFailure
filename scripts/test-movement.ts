@@ -27,7 +27,7 @@ assert(movement.dashBufferMs > 0 && movement.dashBufferMs <= 140, 'Dash buffer m
 assert(playerSpriteConfig.scale === 0.346, 'Hero visual and physics scale must stay at the requested +8% size.');
 assert(playerSpriteConfig.body.width === 104 && playerSpriteConfig.body.height === 242, 'Hero body must grow with the +8% visual scale.');
 assert(playerSpriteConfig.body.offsetX === 88 && playerSpriteConfig.body.offsetY === 26, 'Hero body offset must keep feet aligned after scaling.');
-assert(playerSpriteConfig.projectileHurtZone.width === 93 && playerSpriteConfig.projectileHurtZone.height === 186, 'Hero projectile hurt zone must grow with the +8% scale.');
+assert(playerSpriteConfig.projectileHurtZone.width === 80 && playerSpriteConfig.projectileHurtZone.height === 160, 'Hero projectile hurt zone must stay tightened so enemy energy shots only hit when they visibly connect.');
 assert(movement.jumpVelocity <= -869, 'Hero jump should stay 10% higher than the previous -790 tuning.');
 assert((movement.dashSpeed * movement.dashDurationMs) / 1000 >= 121, 'Hero dash range should grow with the larger sprite.');
 assert(movement.dashEndSpeed >= 405, 'Hero dash exit speed should preserve momentum after the longer dash.');
@@ -82,9 +82,25 @@ assert(playerSource.includes('playerSpriteConfig.scale'), 'Player must apply vis
 assert(playerSource.includes('playerSpriteConfig.body'), 'Player must apply body sizing from playerSpriteConfig.');
 assert(playerSource.includes('playerSpriteConfig.projectileHurtZone'), 'Player must apply projectile hurt zone sizing from playerSpriteConfig.');
 
+const inputSystemSource = await fs.readFile(path.join(root, 'src/systems/InputSystem.ts'), 'utf8');
+assert(inputSystemSource.includes('pointerupoutside'), 'Touch input must release buttons even when a touch ends outside its zone.');
+assert(inputSystemSource.includes('Phaser.Core.Events.BLUR'), 'Touch input must clear stuck buttons on app blur.');
+
+const touchControlsSource = await fs.readFile(path.join(root, 'src/ui/TouchControls.ts'), 'utf8');
+assert(touchControlsSource.includes('isMobileTouchDefault'), 'Touch controls must resolve default visibility from platform type.');
+assert(touchControlsSource.includes('!scene.sys.game.device.os.desktop'), 'Touch controls must stay hidden by default on desktop touch devices.');
+
+const gameConfigSource = await fs.readFile(path.join(root, 'src/game/GameConfig.ts'), 'utf8');
+assert(gameConfigSource.includes('activePointers: 4'), 'Game config must allow at least four simultaneous pointers for multitouch controls.');
+
 const enemyBaseSource = await fs.readFile(path.join(root, 'src/entities/EnemyBase.ts'), 'utf8');
 assert(enemyBaseSource.includes('enemyStateChanged'), 'EnemyBase must emit movement state changes.');
 assert(!enemyBaseSource.includes('this.x = Phaser.Math.Clamp'), 'Enemy damage must not teleport enemies through x clamping.');
+
+const enemySpriteConfigSource = await fs.readFile(path.join(root, 'src/data/enemySpriteConfig.ts'), 'utf8');
+assert(enemySpriteConfigSource.includes('const humanoidScale = playerSpriteConfig.scale'), 'Humanoid enemies must share the protagonist visual scale.');
+assert(enemySpriteConfigSource.includes("body: { width: 98, height: 224, offsetX: 56, offsetY: 34 }"), 'Trooper collider must be retuned for protagonist-sized visuals.');
+assert(enemySpriteConfigSource.includes("body: { width: 118, height: 220, offsetX: 44, offsetY: 28 }"), 'Mech collider must be retuned for protagonist-sized visuals.');
 
 for (const relativePath of ['src/entities/TrooperEnemy.ts', 'src/entities/DroneEnemy.ts', 'src/entities/MechEnemy.ts', 'src/entities/ScoutEnemy.ts', 'src/entities/SentinelEnemy.ts']) {
   const source = await fs.readFile(path.join(root, relativePath), 'utf8');

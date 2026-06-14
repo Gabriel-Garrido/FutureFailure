@@ -29,8 +29,9 @@ function playerAnimations(): SpriteAnimationDefinition[] {
   return [
     animation('player', 'idle', [0, 1, 2, 3, 4], 8, -1),
     animation('player', 'run', [5, 6, 7, 8, 9], 13, -1),
-    animation('player', 'jump', [10, 11, 12], 10, -1),
-    animation('player', 'fall', [12, 13, 14], 10, -1),
+    animation('player', 'jump', [10, 11, 12], 11, 0),
+    animation('player', 'fall', [13, 13], 1, 0),
+    animation('player', 'land', [14, 14], 1, 0),
     animation('player', 'attack', [15, 16, 17, 18, 19], 18, 0),
     animation('player', 'dash', [15, 16, 17, 18, 19], 20, -1),
   ];

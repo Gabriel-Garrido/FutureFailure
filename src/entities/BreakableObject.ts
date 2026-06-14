@@ -13,6 +13,7 @@ export class BreakableObject extends Phaser.Physics.Arcade.Sprite {
   private restScaleY = 1;
   private readonly maxHealth: number;
   private readonly frames: { intact: number; damaged: number; destroyed: number; debris: number };
+  private readonly visualSinkPx: number;
 
   constructor(scene: Phaser.Scene, private readonly breakableData: BreakableData) {
     const texture = assetKey('destructibles', 'fallback-crate');
@@ -22,6 +23,7 @@ export class BreakableObject extends Phaser.Physics.Arcade.Sprite {
     this.health = breakableData.health;
     this.maxHealth = breakableData.health;
     this.frames = this.resolveFrames(breakableData);
+    this.visualSinkPx = this.resolveVisualSinkPx(breakableData.type);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setDepth(DEPTHS.terrain + 1);
@@ -202,10 +204,10 @@ export class BreakableObject extends Phaser.Physics.Arcade.Sprite {
     const frameCenterX = this.frame.width / 2;
     const frameCenterY = this.frame.height / 2;
     const visibleCenterOffsetX = (bounds.x + bounds.width / 2 - frameCenterX) * scale;
-    const visibleCenterOffsetY = (bounds.y + bounds.height / 2 - frameCenterY) * scale;
+    const sinkUnits = this.visualSinkPx / scale;
     this.setScale(scale).setPosition(
       this.breakableData.x + this.breakableData.width / 2 - visibleCenterOffsetX,
-      this.breakableData.y + this.breakableData.height / 2 - visibleCenterOffsetY,
+      this.breakableData.y + this.breakableData.height - (bounds.y + bounds.height - frameCenterY) * scale + this.visualSinkPx,
     );
     // Clip packed-sheet edges, like every other fitted sprite.
     if (measured) cropToOpaqueBounds(this, measured);
@@ -213,8 +215,16 @@ export class BreakableObject extends Phaser.Physics.Arcade.Sprite {
     const bodyWidth = this.breakableData.width / scale;
     const bodyHeight = this.breakableData.height / scale;
     body.setSize(bodyWidth, bodyHeight);
-    body.setOffset(bounds.x + bounds.width / 2 - bodyWidth / 2, bounds.y + bounds.height / 2 - bodyHeight / 2);
+    body.setOffset(
+      bounds.x + bounds.width / 2 - bodyWidth / 2,
+      bounds.y + bounds.height - bodyHeight - sinkUnits,
+    );
     this.resetSolidBody();
+  }
+
+  private resolveVisualSinkPx(type: BreakableData['type']): number {
+    if (type === 'canister') return 3;
+    return 4;
   }
 
   private resetSolidBody(): void {

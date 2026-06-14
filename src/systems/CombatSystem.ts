@@ -62,6 +62,9 @@ export class CombatSystem {
       // so resolve the projectile by type instead of relying on argument order.
       const projectile = (objectA instanceof Projectile ? objectA : objectB) as Projectile;
       if (!projectile.active || projectile.fromPlayer) return;
+      const projectileBody = projectile.body as Phaser.Physics.Arcade.Body;
+      const projectileRadius = Math.max(projectileBody.halfWidth, projectileBody.halfHeight) * 0.8;
+      if (!player.isProjectilePointInsideDamageArea(projectile.x, projectile.y, projectileRadius)) return;
       if (!projectile.consumeImpact()) return;
       const payload = this.enemyProjectilePayload(projectile);
       projectile.kill();

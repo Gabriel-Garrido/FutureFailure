@@ -7,8 +7,16 @@ export const playerSpriteConfig = {
     offsetY: 26,
   },
   projectileHurtZone: {
-    width: 93,
-    height: 186,
-    offsetY: -8,
+    width: 80,
+    height: 160,
+    offsetY: 2,
+  },
+  projectileDamageArea: {
+    offsetY: 22,
+    radiusX: 28,
+    radiusY: 48,
+  },
+  targeting: {
+    torsoAimOffsetY: 22,
   },
 } as const;
