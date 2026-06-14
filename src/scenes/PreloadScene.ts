@@ -30,7 +30,34 @@ export class PreloadScene extends Phaser.Scene {
 
   create(): void {
     this.createSpriteAnimations();
-    this.scene.start('MainMenuScene');
+    this.startWhenFontsReady();
+  }
+
+  /**
+   * The menu renders Orbitron/Rajdhani into the canvas. Wait until those web
+   * fonts are ready so the first paint uses them, with a hard timeout fallback
+   * so a slow/offline font CDN never blocks the game from starting.
+   */
+  private startWhenFontsReady(): void {
+    let started = false;
+    const go = (): void => {
+      if (started) return;
+      started = true;
+      this.scene.start('MainMenuScene');
+    };
+
+    const fontset = document.fonts;
+    if (!fontset || typeof fontset.load !== 'function') {
+      go();
+      return;
+    }
+
+    const requests = ["700 46px 'Rajdhani'", "600 18px 'Rajdhani'", "800 20px 'Orbitron'", "700 15px 'Orbitron'"];
+    Promise.all(requests.map((font) => fontset.load(font)))
+      .then(() => fontset.ready)
+      .catch(() => undefined)
+      .then(go);
+    this.time.delayedCall(1600, go);
   }
 
   private createSpriteAnimations(): void {
