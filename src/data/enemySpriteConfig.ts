@@ -80,8 +80,10 @@ export const enemySpriteConfig = {
     animations: {
       idle: { frames: range(0, 5), frameRate: 7, repeat: -1 },
       move: { frames: range(6, 11), frameRate: 8, repeat: -1 },
-      attack: { frames: range(12, 17), frameRate: 9, repeat: -1 },
-      hurt: { frames: range(24, 29), frameRate: 13, repeat: 0 },
+      // Row 3 is the real firing sequence (cannon flash); row 2 was only the
+      // static cannon-raise. Using the firing row reads as an actual attack.
+      attack: { frames: range(18, 23), frameRate: 10, repeat: -1 },
+      hurt: { frames: range(24, 29), frameRate: 12, repeat: 0 },
       death: { frames: range(30, 35), frameRate: 12, repeat: 0 },
     },
   },

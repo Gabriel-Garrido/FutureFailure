@@ -103,6 +103,17 @@ export class MechEnemy extends EnemyBase {
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setMaxVelocity(this.isBoss ? 220 : 150, this.isBoss ? 720 : 680);
 
+    if (this.isBoss) {
+      // Only the dedicated energy stun should ever interrupt the boss.
+      this.staggerResistant = true;
+      // The mech sheet is packed with no inter-frame padding; magnified 5x the
+      // top/bottom edges sample a sliver of the neighbouring frame. Inset the
+      // rendered region (sides untouched so the muzzle flash is never clipped).
+      const cropTop = 5;
+      const cropBottom = 4;
+      this.setCrop(0, cropTop, this.frame.width, this.frame.height - cropTop - cropBottom);
+    }
+
     const glowWidth = this.isBoss ? 88 * profile.scale * this.sizeScale * 1.8 : 128;
     const glowHeight = this.isBoss ? 46 : 30;
     this.glow = scene.add.ellipse(this.x, this.y, glowWidth, glowHeight, COLORS.red, 0.08)

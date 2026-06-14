@@ -14,6 +14,9 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
   protected hitstunMs = 0;
   protected recoverMs = 0;
   protected knockbackMultiplier = 1;
+  // When true, regular hits still deal damage and flash, but never apply
+  // hitstun, knockback or the hurt reaction — only a dedicated stun stops it.
+  protected staggerResistant = false;
   protected dead = false;
   protected movementState: EnemyMovementState = 'idle';
   protected readonly homeX: number;
@@ -60,15 +63,17 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.hitFlashMs = 150;
-    this.hitstunMs = payload.stunMs;
-    this.recoverMs = Math.max(this.recoverMs, payload.stunMs + 120);
-    this.setMovementState('stunned', 'damage');
-    this.playEnemyAnimation('hurt');
     this.setTint(COLORS.cyan);
-    if (payload.knockback.enabled) {
-      body.setVelocityX(Phaser.Math.Clamp(payload.knockback.x * hitDirection * this.knockbackMultiplier, -380, 380));
-      if (body.allowGravity) body.setVelocityY(Math.min(body.velocity.y, payload.knockback.y * this.knockbackMultiplier));
-      else body.setVelocityY(payload.knockback.y * 0.62 * this.knockbackMultiplier);
+    if (!this.staggerResistant) {
+      this.hitstunMs = payload.stunMs;
+      this.recoverMs = Math.max(this.recoverMs, payload.stunMs + 120);
+      this.setMovementState('stunned', 'damage');
+      this.playEnemyAnimation('hurt');
+      if (payload.knockback.enabled) {
+        body.setVelocityX(Phaser.Math.Clamp(payload.knockback.x * hitDirection * this.knockbackMultiplier, -380, 380));
+        if (body.allowGravity) body.setVelocityY(Math.min(body.velocity.y, payload.knockback.y * this.knockbackMultiplier));
+        else body.setVelocityY(payload.knockback.y * 0.62 * this.knockbackMultiplier);
+      }
     }
     this.scene.events.emit(EVENTS.enemyDamaged, this.x, this.y, hitDirection, payload);
     return false;
