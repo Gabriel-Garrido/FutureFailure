@@ -195,6 +195,12 @@ export class CombatSystem {
   }
 
   private reflectedVelocity(player: Player, projectile: Projectile, speed: number): Phaser.Math.Vector2 {
+    const sourceEnemy = projectile.getData('sourceEnemy') as EnemyBase | undefined;
+    if (sourceEnemy && sourceEnemy.active && !sourceEnemy.isDead()) {
+      const returnPoint = sourceEnemy.projectileReturnPoint();
+      const towardSource = new Phaser.Math.Vector2(returnPoint.x - projectile.x, returnPoint.y - projectile.y);
+      if (towardSource.lengthSq() > 1) return towardSource.normalize().scale(speed);
+    }
     const body = projectile.body as Phaser.Physics.Arcade.Body;
     const incoming = new Phaser.Math.Vector2(body.velocity.x, body.velocity.y);
     if (incoming.lengthSq() <= 1) return new Phaser.Math.Vector2(player.movement.state.facing * speed, 0);

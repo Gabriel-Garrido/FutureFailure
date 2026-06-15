@@ -10,7 +10,7 @@ import { type BreakableData, type RectData } from '../data/levelTypes';
 import { enemySpriteProfileFor } from '../data/enemySpriteConfig';
 import { DroneEnemy } from '../entities/DroneEnemy';
 import { EnemyBase } from '../entities/EnemyBase';
-import { BOSS_HEALTH_EVENT, BOSS_SUMMON_DRONES_EVENT } from '../entities/MechEnemy';
+import { BOSS_HEALTH_EVENT, BOSS_SUMMON_DRONES_EVENT, type BossSummonDronesPayload } from '../entities/MechEnemy';
 import { Pickup, type PickupType } from '../entities/Pickup';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
@@ -172,7 +172,7 @@ export class LevelOneScene extends Phaser.Scene {
       this.audioSystem?.blip('hit');
       this.spawnBreakableDrop(breakable);
     });
-    this.events.on(BOSS_SUMMON_DRONES_EVENT, (x: number, y: number, count: number, direction: 1 | -1) => this.summonBossDrones(x, y, count, direction));
+    this.events.on(BOSS_SUMMON_DRONES_EVENT, (payload: BossSummonDronesPayload) => this.summonBossDrones(payload));
     this.events.on(BOSS_HEALTH_EVENT, (current: number, max: number, dead: boolean) => this.updateBossHealthBar(current, max, dead));
     this.events.on('enemy-shoot', () => this.audioSystem?.blip('shoot'));
     this.events.on('player-dash', () => this.cameraSystem?.shake('light'));
@@ -343,31 +343,40 @@ export class LevelOneScene extends Phaser.Scene {
   }
 
   /**
-   * Boss special attack: instead of an energy burst it summons drones that fly
-   * out in different directions. Drones join the live enemy group so the player
-   * must clear them (and the boss) before the portal opens. A concurrency cap
-   * keeps the fight fair across repeated volleys.
+   * Boss special attack: instead of an energy burst it summons drones that
+   * materialise halfway between the boss and the player and are launched toward
+   * the player. Drones join the live enemy group so the player must clear them
+   * (and the boss) before the portal opens. A concurrency cap keeps the fight
+   * fair across repeated volleys.
    */
-  private summonBossDrones(x: number, y: number, count: number, direction: 1 | -1): void {
+  private summonBossDrones(payload: BossSummonDronesPayload): void {
     if (!this.level) return;
     const liveBossDrones = (this.level.enemies.getChildren() as EnemyBase[])
       .filter((enemy) => !enemy.isDead() && enemy.getData('bossDrone') === true).length;
-    const spawnCount = Math.max(0, Math.min(count, this.bossDroneCap - liveBossDrones));
+    const spawnCount = Math.max(0, Math.min(payload.count, this.bossDroneCap - liveBossDrones));
     if (spawnCount <= 0) return;
 
     const profile = enemySpriteProfileFor('drone');
-    const launchAngles = [-2.42, -1.57, -0.72]; // up-left, up, up-right
+    // Spawn at the midpoint of the boss->player line, then launch toward the player.
+    const midX = (payload.originX + payload.targetX) / 2;
+    const midY = (payload.originY + payload.targetY) / 2;
+    const launchDir = new Phaser.Math.Vector2(payload.targetX - midX, payload.targetY - midY);
+    if (launchDir.lengthSq() < 1) launchDir.set(Math.sign(payload.targetX - payload.originX) || 1, 0);
+    launchDir.normalize();
+    // Fan the trio out perpendicular to the launch direction so they don't stack.
+    const perp = new Phaser.Math.Vector2(-launchDir.y, launchDir.x);
+    const launchSpeed = 250;
+
     for (let i = 0; i < spawnCount; i += 1) {
       const offset = i - (spawnCount - 1) / 2;
-      const spawnX = Phaser.Math.Clamp(x + direction * 26 + offset * 84, 8460, 10520);
-      const spawnY = Phaser.Math.Clamp(y - 24, 360, 1000);
+      const spawnX = Phaser.Math.Clamp(midX + perp.x * offset * 72, 8460, 10520);
+      const spawnY = Phaser.Math.Clamp(midY + perp.y * offset * 72, 340, 1010);
       const drone = new DroneEnemy(this, spawnX, spawnY, profile, spawnX - 280, spawnX + 280);
       drone.setData('bossDrone', true);
       this.level.enemies.add(drone);
       const body = drone.body as Phaser.Physics.Arcade.Body;
-      const angle = launchAngles[i % launchAngles.length];
-      body.setVelocity(Math.cos(angle) * 210, Math.sin(angle) * 210);
-      this.particles?.enemyHit(spawnX, spawnY, direction);
+      body.setVelocity(launchDir.x * launchSpeed, launchDir.y * launchSpeed);
+      this.particles?.enemyHit(spawnX, spawnY, launchDir.x >= 0 ? 1 : -1);
     }
     this.cameraSystem?.shake('hit');
   }

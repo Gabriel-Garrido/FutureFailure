@@ -289,7 +289,7 @@ const design = {
       tests: ['melee', 'energy', 'dash'],
       rewardIds: ['breakable-boss-health-cache'],
       risk: 'high',
-      notes: 'Jefe mech 5x: vida y tamano quintuplicados; cada tercera rafaga invoca drones y luego triplica su espera.',
+      notes: 'Jefe mech grande: vida quintuplicada; cada tercera rafaga invoca drones y luego triplica su espera.',
     },
     {
       id: 'beat-boss-exit',
@@ -491,7 +491,7 @@ export const levelOne: LevelData = {
     { id: 'enemy-arena-drone-left', type: 'drone', x: 7420, y: 760, zone: 'arena', patrolMin: 7240, patrolMax: 7650, isFunctional: true },
     { id: 'enemy-arena-mech', type: 'mech', x: 7860, y: 1000, zone: 'arena', patrolMin: 7580, patrolMax: 8180, isFunctional: true, notes: 'Mech como elite final con espacio amplio.' },
     { id: 'enemy-arena-trooper-right', type: 'trooper', x: 8220, y: 1000, zone: 'arena', patrolMin: 7980, patrolMax: 8320, isFunctional: true },
-    { id: 'enemy-boss-core', type: 'boss', x: 9530, y: 900, zone: 'boss', patrolMin: 8760, patrolMax: 10300, isFunctional: true, notes: 'Mech guardian 5x: vida y tamano quintuplicados; cada tercera rafaga triple invoca 3 drones; tras 5 bolas de energia queda aturdido 4s.' },
+    { id: 'enemy-boss-core', type: 'boss', x: 9530, y: 1018, zone: 'boss', patrolMin: 8760, patrolMax: 10300, isFunctional: true, notes: 'Mech guardian grande: vida quintuplicada; cada tercera rafaga triple invoca 3 drones; tras 5 bolas de energia queda aturdido 4s.' },
   ],
   interactables,
   terminals: interactables,

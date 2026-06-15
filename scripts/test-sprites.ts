@@ -38,8 +38,11 @@ for (const playerAnimation of ['idle', 'run', 'jump', 'fall', 'land', 'attack', 
 }
 const playerFall = definitions.find((definition) => definition.key === spriteAnimationKey('player', 'fall'));
 const playerLand = definitions.find((definition) => definition.key === spriteAnimationKey('player', 'land'));
+const playerDash = definitions.find((definition) => definition.key === spriteAnimationKey('player', 'dash'));
 assert(playerFall?.frames.every((frame) => frame === 13) === true, 'Player fall animation must use the verified descending frame 13.');
 assert(playerLand?.frames.every((frame) => frame === 14) === true, 'Player land animation must use the verified landing frame 14.');
+assert(playerDash?.frames.join(',') === '10,11', 'Player dash animation must use non-attack airborne frames 10..11.');
+assert(playerDash?.frames.every((frame) => frame < 15) === true, 'Player dash animation must not reuse sword-slash frames.');
 
 const usedEnemyTypes = new Set<EnemyType>(levelOne.enemies.map((enemy) => enemy.type));
 for (const type of usedEnemyTypes) {
@@ -69,7 +72,14 @@ assert(!droneDeath.some((frame) => frame >= 30 && frame <= 35), 'Drone death mus
 assert(enemySpriteConfig.mech.initialFrame === 0, 'Mech must start on frame 0.');
 assert(enemySpriteConfig.mech.animations.death.frames.join(',') === '30,31,32,33,34,35', 'Mech death should use its actual collapse sequence.');
 assert(enemySpriteConfig.trooper.scale === humanoidScale, 'Trooper scale must compensate for enemy/player frame size ratio to match protagonist visual height.');
-assert(enemySpriteConfig.mech.scale === humanoidScale, 'Mech scale must compensate for enemy/player frame size ratio to match protagonist visual height.');
+assert(enemySpriteConfig.mech.scale === 0.5, 'Mech must keep its dedicated quadruped walker scale.');
+assert(enemySpriteConfig.mech.animations.hurt.frames.join(',') === '24', 'Mech hurt must stay on the readable standing-damage frame.');
+assert(enemySpriteConfig.boss.textureKey === enemySpriteConfig.mech.textureKey, 'Boss mech must reuse mech.png instead of a separate boss sheet.');
+assert(enemySpriteConfig.boss.renderCrop === undefined, 'Boss mech must not crop the top edge when using the clean mech sheet.');
+assert(enemySpriteConfig.boss.scale === enemySpriteConfig.mech.scale, 'Boss mech must inherit the mech base scale before size scaling.');
+assert(enemySpriteConfig.boss.origin.y === enemySpriteConfig.mech.origin.y, 'Boss mech must keep the same vertical anchor as the base mech sheet.');
+assert(enemySpriteConfig.boss.animations.attack.frames.join(',') === enemySpriteConfig.mech.animations.attack.frames.join(','), 'Boss mech must use the same verified firing row as mech.png.');
+assert(enemySpriteConfig.boss.animations.hurt.frames.join(',') === '24', 'Boss hurt must stay on a stable damage frame instead of collapsing during stun.');
 
 for (const role of ['idle', 'move', 'attack'] as EnemyVisualRole[]) {
   assert(enemySpriteConfig.scout.animations[role].frames.join(',') === '0', `Scout ${role} must stay on the selected bot-with-wheels frame.`);
@@ -104,6 +114,11 @@ assert(enemyBaseSource.includes('playEnemyAnimation'), 'EnemyBase must drive ene
 assert(enemyBaseSource.includes("playEnemyAnimation('death')"), 'EnemyBase must play a death animation before hiding defeated enemies.');
 assert(enemyBaseSource.includes('spriteProfile.body'), 'EnemyBase must apply body sizing from enemySpriteConfig.');
 assert(enemyBaseSource.includes('spriteProfile.scale'), 'EnemyBase must apply visual scale from enemySpriteConfig.');
+assert(enemyBaseSource.includes('renderCrop'), 'EnemyBase must support per-profile sprite cropping for packed sheets.');
+
+const mechSource = await fs.readFile(path.join(root, 'src/entities/MechEnemy.ts'), 'utf8');
+assert(mechSource.includes('spriteFramePoint'), 'MechEnemy must derive cannon anchors from fixed sprite-frame coordinates.');
+assert(!mechSource.includes('const bounds = this.getBounds()'), 'MechEnemy cannon anchors must not drift with animated bounds.');
 
 assert(!await exists(path.join(root, 'src/entities/Hazard.ts')), 'Static Hazard entity must stay removed.');
 

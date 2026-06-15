@@ -33,17 +33,22 @@ function playerAnimations(): SpriteAnimationDefinition[] {
     animation('player', 'fall', [13, 13], 1, 0),
     animation('player', 'land', [14, 14], 1, 0),
     animation('player', 'attack', [15, 16, 17, 18, 19], 18, 0),
-    animation('player', 'dash', [15, 16, 17, 18, 19], 20, -1),
+    // The current player sheet has no dedicated dash row; keep dash readable
+    // without reusing the sword-slash frames.
+    animation('player', 'dash', [10, 11], 20, -1),
   ];
 }
 
 function enemyAnimations(): SpriteAnimationDefinition[] {
-  return Object.values(enemySpriteConfig).flatMap((profile) => (
-    Object.entries(profile.animations).flatMap(([role, spec]) => {
-      if (spec.frames.length < 2) return [];
-      return [animation(profile.textureKey, role as EnemyVisualRole, [...spec.frames], spec.frameRate ?? 8, spec.repeat ?? -1)];
-    })
-  ));
+  const unique = new Map<string, SpriteAnimationDefinition>();
+  for (const profile of Object.values(enemySpriteConfig)) {
+    for (const [role, spec] of Object.entries(profile.animations)) {
+      if (spec.frames.length < 2) continue;
+      const definition = animation(profile.textureKey, role as EnemyVisualRole, [...spec.frames], spec.frameRate ?? 8, spec.repeat ?? -1);
+      if (!unique.has(definition.key)) unique.set(definition.key, definition);
+    }
+  }
+  return [...unique.values()];
 }
 
 function animation(textureKey: string, animationId: string, frames: number[], frameRate: number, repeat: number): SpriteAnimationDefinition {

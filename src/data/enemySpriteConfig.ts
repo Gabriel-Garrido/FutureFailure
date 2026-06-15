@@ -3,8 +3,7 @@ import { type EnemyData } from './levelTypes';
 import { playerSpriteConfig } from './playerSpriteConfig';
 
 export type EnemyType = EnemyData['type'];
-// The boss reuses the mech spritesheet at 5x scale, so it has no dedicated
-// sprite profile; every other ("sprited") enemy type owns one.
+// The boss reuses the main mech spritesheet with a larger on-screen scale.
 export type SpritedEnemyType = Exclude<EnemyType, 'boss'>;
 export type EnemyVisualRole = 'idle' | 'move' | 'attack' | 'hurt' | 'death';
 
@@ -19,6 +18,12 @@ export type EnemySpriteProfile = {
   textureKey: string;
   initialFrame: number;
   scale: number;
+  renderCrop?: {
+    top?: number;
+    right?: number;
+    bottom?: number;
+    left?: number;
+  };
   origin: {
     x: number;
     y: number;
@@ -74,16 +79,36 @@ export const enemySpriteConfig = {
     type: 'mech',
     textureKey: assetKeyFor({ key: 'mech', category: 'enemy', enemyType: 'mech' }, 'fallback-mech'),
     initialFrame: 0,
-    scale: humanoidScale,
-    origin: { x: 0.5, y: 0.62 },
-    body: { width: 88, height: 164, offsetX: 33, offsetY: 21 },
+    scale: 0.5,
+    origin: { x: 0.5, y: 0.58 },
+    body: { width: 112, height: 150, offsetX: 48, offsetY: 52 },
     animations: {
       idle: { frames: range(0, 5), frameRate: 7, repeat: -1 },
       move: { frames: range(6, 11), frameRate: 8, repeat: -1 },
       // Row 3 is the real firing sequence (cannon flash); row 2 was only the
       // static cannon-raise. Using the firing row reads as an actual attack.
       attack: { frames: range(18, 23), frameRate: 10, repeat: -1 },
-      hurt: { frames: range(24, 29), frameRate: 12, repeat: 0 },
+      hurt: { frames: [24], frameRate: 1, repeat: 0 },
+      death: { frames: range(30, 35), frameRate: 12, repeat: 0 },
+    },
+  },
+  boss: {
+    type: 'boss',
+    textureKey: assetKeyFor({ key: 'mech', category: 'enemy', enemyType: 'mech' }, 'fallback-mech'),
+    initialFrame: 0,
+    scale: 0.5,
+    renderCrop: undefined,
+    origin: { x: 0.5, y: 0.58 },
+    // Hitbox covers only the chassis/hull (the "body"), not the spider legs:
+    // hull content sits at frame-y 100..170, centred horizontally. The legs are
+    // left out so they can neither be hit nor deal contact damage. Grounding is
+    // handled manually in MechEnemy (gravity is disabled for the boss).
+    body: { width: 104, height: 78, offsetX: 53, offsetY: 96 },
+    animations: {
+      idle: { frames: range(0, 5), frameRate: 7, repeat: -1 },
+      move: { frames: range(6, 11), frameRate: 8, repeat: -1 },
+      attack: { frames: range(18, 23), frameRate: 10, repeat: -1 },
+      hurt: { frames: [24], frameRate: 1, repeat: 0 },
       death: { frames: range(30, 35), frameRate: 12, repeat: 0 },
     },
   },
@@ -117,10 +142,8 @@ export const enemySpriteConfig = {
       death: { frames: [30, 31], frameRate: 8, repeat: 0 },
     },
   },
-} as const satisfies Record<SpritedEnemyType, EnemySpriteProfile>;
+} as const satisfies Record<EnemyType, EnemySpriteProfile>;
 
 export function enemySpriteProfileFor(type: EnemyType): EnemySpriteProfile {
-  // The boss is a heavy mech rendered 5x larger; it shares the mech sheet.
-  if (type === 'boss') return enemySpriteConfig.mech;
   return enemySpriteConfig[type];
 }

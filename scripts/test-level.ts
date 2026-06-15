@@ -217,6 +217,11 @@ assert(arenaEnemies.length >= 2, 'Final arena should have at least two enemies.'
 for (const enemy of arenaEnemies) {
   assert(enemy.x > keycard.x, `${enemy.id} must be after the keycard pickup.`);
 }
+const bossEnemy = byId(levelOne.enemies, 'enemy-boss-core');
+assert(bossEnemy.type === 'boss', 'LevelOne must keep the final boss enemy present.');
+assert(bossEnemy.zone === 'boss', 'Final boss must spawn in the boss zone.');
+assert(bossEnemy.x >= 9200 && bossEnemy.x <= 10000, 'Final boss must spawn inside the readable boss fight beat.');
+assert(bossEnemy.y >= 900 && bossEnemy.y <= 980, 'Final boss must spawn grounded and visible above the boss arena floor.');
 
 const markerXs = levelOne.mapMarkers.map((marker) => marker.x);
 const sortedMarkerXs = [...markerXs].sort((a, b) => a - b);

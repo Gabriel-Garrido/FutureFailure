@@ -82,6 +82,7 @@ assert(combatSystemSource.includes('instanceof Projectile'), 'Enemy projectile o
 assert(combatSystemSource.includes('deflectEnemyProjectile'), 'CombatSystem must let melee attacks deflect enemy projectiles.');
 assert(combatSystemSource.includes('projectile.fromPlayer'), 'CombatSystem must distinguish deflected projectiles from hostile projectiles.');
 assert(combatSystemSource.includes("source: 'deflectedProjectile'"), 'Deflected projectile damage must use a semantic damage source.');
+assert(combatSystemSource.includes("projectile.getData('sourceEnemy')"), 'Deflected enemy projectiles should try to return toward their source enemy.');
 
 const projectileSource = await fs.readFile(path.join(root, 'src/entities/Projectile.ts'), 'utf8');
 assert(projectileSource.includes('hitId'), 'Projectile must expose hitId for damage idempotency.');
@@ -118,6 +119,7 @@ assert(movementSource.includes('applyRetainedDamageVelocity'), 'MovementControll
 
 const enemyBaseSource = await fs.readFile(path.join(root, 'src/entities/EnemyBase.ts'), 'utf8');
 assert(enemyBaseSource.includes('player.torsoAimY()'), 'Enemies must aim at the player torso via the shared anchor.');
+assert(enemyBaseSource.includes("projectile.setData('sourceEnemy', this)"), 'Enemy-fired projectiles must remember their source enemy for accurate deflection returns.');
 
 // Drop economy: defeating enemies must reward the player, with energy the most
 // likely pickup so the energy-driven ranged attack stays sustainable.

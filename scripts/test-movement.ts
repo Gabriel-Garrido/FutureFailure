@@ -60,7 +60,7 @@ assert(drone.idealDistanceX > 120, 'Drone must keep a readable horizontal combat
 assert(drone.verticalBob > 0 && drone.verticalBob <= 48, 'Drone bob must be visible but not erratic.');
 
 for (const enemy of levelOne.enemies) {
-  // The boss reuses the mech movement profile (it is a 5x heavy mech).
+  // The boss reuses the mech movement profile with a larger combat scale.
   const movementType = enemy.type === 'boss' ? 'mech' : enemy.type;
   assert(Boolean(enemyMovementConfig[movementType]), `${enemy.id} has no enemy movement config.`);
   assert(typeof enemy.patrolMin === 'number' && typeof enemy.patrolMax === 'number', `${enemy.id} must define patrol bounds.`);
@@ -105,7 +105,9 @@ assert(enemySpriteConfigSource.includes('const humanoidScale = playerSpriteConfi
 // 280/209 the local dims were divided by the same ratio so the world-space
 // hitbox stays identical to the protagonist-matched tuning.
 assert(enemySpriteConfigSource.includes("body: { width: 73, height: 167, offsetX: 42, offsetY: 25 }"), 'Trooper collider must keep its protagonist-matched world hitbox after the humanoidScale change.');
-assert(enemySpriteConfigSource.includes("body: { width: 88, height: 164, offsetX: 33, offsetY: 21 }"), 'Mech collider must keep its protagonist-matched world hitbox after the humanoidScale change.');
+assert(enemySpriteConfigSource.includes("scale: 0.5"), 'Mech must use its own walker scale instead of the humanoid protagonist ratio.');
+assert(enemySpriteConfigSource.includes("origin: { x: 0.5, y: 0.58 }"), 'Mech origin must anchor the quadruped sprite closer to its feet.');
+assert(enemySpriteConfigSource.includes("body: { width: 112, height: 150, offsetX: 48, offsetY: 52 }"), 'Mech collider must fit the quadruped walker silhouette.');
 
 for (const relativePath of ['src/entities/TrooperEnemy.ts', 'src/entities/DroneEnemy.ts', 'src/entities/MechEnemy.ts', 'src/entities/ScoutEnemy.ts', 'src/entities/SentinelEnemy.ts']) {
   const source = await fs.readFile(path.join(root, relativePath), 'utf8');

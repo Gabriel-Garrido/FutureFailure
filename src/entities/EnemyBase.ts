@@ -43,6 +43,14 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(DEPTHS.enemies);
     this.setScale(spriteProfile.scale);
     this.setOrigin(spriteProfile.origin.x, spriteProfile.origin.y);
+    if (spriteProfile.renderCrop) {
+      const crop = spriteProfile.renderCrop;
+      const left = crop.left ?? 0;
+      const top = crop.top ?? 0;
+      const right = crop.right ?? 0;
+      const bottom = crop.bottom ?? 0;
+      this.setCrop(left, top, this.frame.width - left - right, this.frame.height - top - bottom);
+    }
     this.setCollideWorldBounds(false);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(spriteProfile.body.width, spriteProfile.body.height);
@@ -182,6 +190,7 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     const projectile = projectiles.get(x, y) as import('./Projectile').Projectile | null;
     if (!projectile) return;
     projectile.fire(x, y, speed * this.direction, 0, false, tint, damage);
+    projectile.setData('sourceEnemy', this);
     this.scene.events.emit('enemy-shoot');
   }
 
@@ -208,11 +217,16 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     this.direction = dx >= 0 ? 1 : -1;
     this.setFlipX(this.direction < 0);
     projectile.fire(x, y, (dx / length) * speed, (dy / length) * speed, false, tint, damage);
+    projectile.setData('sourceEnemy', this);
     this.scene.events.emit('enemy-shoot');
   }
 
   protected playerTorsoY(player: Player): number {
     return player.torsoAimY();
+  }
+
+  projectileReturnPoint(): { x: number; y: number } {
+    return { x: this.x, y: this.y };
   }
 
   protected telegraph(color = COLORS.amber, size = 46, durationMs = 220): void {

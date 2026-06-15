@@ -334,6 +334,70 @@ function cleanPixels(input: Buffer, width: number, height: number, columns: numb
   return output;
 }
 
+/**
+ * Removes stray content bands baked into a frame: small clusters of opaque
+ * pixels near the top or bottom edge that bled in from the neighbouring frame
+ * during generation/atlasing. For each frame we keep only the dominant vertical
+ * content band and clear minority bands that (a) are separated by a clear
+ * transparent gap, (b) hug an edge, and (c) are a small fraction of the main
+ * mass — so legitimate multi-part frames are never touched.
+ */
+function removeStrayFrameBands(input: Buffer, width: number, height: number, columns: number, rows: number): Buffer {
+  if (columns < 2 || rows < 2) return input;
+  const output = Buffer.from(input);
+  const frameWidth = Math.floor(width / columns);
+  const frameHeight = Math.floor(height / rows);
+  const gap = Math.max(10, Math.round(frameHeight * 0.06));
+  const edge = Math.round(frameHeight * 0.22);
+  const minorityFraction = 0.18;
+  const alphaAt = (x: number, y: number): number => output[(y * width + x) * 4 + 3];
+
+  for (let cr = 0; cr < rows; cr += 1) {
+    for (let cc = 0; cc < columns; cc += 1) {
+      const ox = cc * frameWidth;
+      const oy = cr * frameHeight;
+      const fill: number[] = [];
+      for (let y = 0; y < frameHeight; y += 1) {
+        let count = 0;
+        for (let x = 0; x < frameWidth; x += 1) if (alphaAt(ox + x, oy + y) > 20) count += 1;
+        fill.push(count);
+      }
+      const bands: Array<[number, number]> = [];
+      let start = -1;
+      for (let y = 0; y <= frameHeight; y += 1) {
+        const on = y < frameHeight && fill[y] > 0;
+        if (on && start < 0) start = y;
+        else if (!on && start >= 0) {
+          bands.push([start, y - 1]);
+          start = -1;
+        }
+      }
+      const merged: Array<[number, number]> = [];
+      for (const band of bands) {
+        const last = merged[merged.length - 1];
+        if (last && band[0] - last[1] <= gap) last[1] = band[1];
+        else merged.push([...band]);
+      }
+      if (merged.length <= 1) continue;
+      const score = merged.map(([a, b]) => {
+        let total = 0;
+        for (let y = a; y <= b; y += 1) total += fill[y];
+        return total;
+      });
+      const keep = score.indexOf(Math.max(...score));
+      merged.forEach(([a, b], index) => {
+        if (index === keep) return;
+        const hugsEdge = a <= edge || b >= frameHeight - 1 - edge;
+        const isMinority = score[index] < score[keep] * minorityFraction;
+        if (!hugsEdge || !isMinority) return;
+        for (let y = a; y <= b; y += 1) for (let x = 0; x < frameWidth; x += 1) output[((oy + y) * width + (ox + x)) * 4 + 3] = 0;
+      });
+    }
+  }
+
+  return output;
+}
+
 function keyFor(fileName: string): string {
   const slug = slugify(fileName);
   return primaryKeyBySlug.get(slug) ?? slug;
@@ -357,7 +421,8 @@ async function processSpritesheet(rawPath: string, outPath: string, classificati
     .raw()
     .toBuffer();
   const cleaned = cleanPixels(raw, classification.width, classification.height, classification.columns, classification.rows);
-  await sharp(cleaned, {
+  const deStrayed = removeStrayFrameBands(cleaned, classification.width, classification.height, classification.columns, classification.rows);
+  await sharp(deStrayed, {
     raw: { width: classification.width, height: classification.height, channels: 4 },
   })
     .png({ compressionLevel: 9, palette: false })
